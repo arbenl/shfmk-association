@@ -57,7 +57,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, message: "Ky email tashmë është i regjistruar. Sapo jua ridërguam email-in e konfirmimit.", code: "ALREADY_REGISTERED_RESENT" }, { status: 200 });
       } catch (emailError) {
         console.error("Failed to resend confirmation email on duplicate registration:", emailError);
-        return NextResponse.json({ ok: false, error: "Email-i juaj është i regjistruar, por dërgimi i email-it të konfirmimit dështoi. Ju lutemi kontaktoni organizatorin.", code: "EMAIL_SEND_FAILED" }, { status: 500 });
+        return NextResponse.json({
+          ok: false,
+          error: "Ju jeni regjistruar tashmë, por dërgimi i email-it dështoi. Ju lutemi provoni përsëri më vonë.",
+          code: "EMAIL_RESEND_FAILED"
+        }, { status: 429 }); // Rate limited / Temporary failure
       }
     }
 
@@ -88,7 +92,7 @@ export async function POST(req: NextRequest) {
     if (!token) {
       throw new Error("QR token generation failed. This might be due to a missing or invalid QR_PRIVATE_KEY_PEM.");
     }
-    
+
     if (generated && publicKeyPem) {
       console.warn("DEMO MODE: QR_PRIVATE_KEY_PEM missing. Generated temporary key pair.");
     }
@@ -156,7 +160,7 @@ export async function POST(req: NextRequest) {
       } else if (error.message.includes("Failed to create registration")) {
         // This could be a unique constraint violation if the check above fails due to a race condition.
         code = "DB_INSERT_FAILED";
-         if (error.message.includes("duplicate key value violates unique constraint")) {
+        if (error.message.includes("duplicate key value violates unique constraint")) {
           code = "ALREADY_REGISTERED";
           message = "Ky email tashmë është i regjistruar.";
         }
@@ -168,7 +172,7 @@ export async function POST(req: NextRequest) {
         message = "Regjistrimet janë mbyllur.";
       }
     }
-    
+
     return NextResponse.json({ ok: false, error: message, code }, { status: code === 'ALREADY_REGISTERED' ? 409 : 500 });
   }
 }

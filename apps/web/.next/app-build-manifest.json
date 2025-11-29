@@ -23,7 +23,7 @@
       "static/chunks/474-105620bb27c31d97.js",
       "static/chunks/main-app-cd7d4004f90977ab.js",
       "static/chunks/480-71e89d96008c4dd2.js",
-      "static/chunks/app/admin/login/page-a80fa4d72e6932ed.js"
+      "static/chunks/app/admin/login/page-f21671fbe44205cb.js"
     ],
     "/admin/registrations/page": [
       "static/chunks/webpack-a39d4a046485dd81.js",
@@ -38,8 +38,8 @@
       "static/chunks/474-105620bb27c31d97.js",
       "static/chunks/main-app-cd7d4004f90977ab.js",
       "static/chunks/480-71e89d96008c4dd2.js",
-      "static/chunks/446-9d216a804bed1359.js",
-      "static/chunks/app/conference/register/page-2d3e045ee20212ad.js"
+      "static/chunks/591-59d9ef401b494788.js",
+      "static/chunks/app/conference/register/page-df901c319e2a61f3.js"
     ],
     "/conference/register/success/page": [
       "static/chunks/webpack-a39d4a046485dd81.js",
@@ -58,13 +58,12 @@
       "static/chunks/756-fa4b9ca91c8b1b6b.js",
       "static/chunks/app/konferenca/page-123ccc84d4c56c0b.js"
     ],
-    "/kontakt/page": [
+    "/rreth-nesh/page": [
       "static/chunks/webpack-a39d4a046485dd81.js",
       "static/chunks/7b075a90-336e1beb9dddacdb.js",
       "static/chunks/474-105620bb27c31d97.js",
       "static/chunks/main-app-cd7d4004f90977ab.js",
-      "static/chunks/480-71e89d96008c4dd2.js",
-      "static/chunks/app/kontakt/page-4477fe36e4ca8286.js"
+      "static/chunks/app/rreth-nesh/page-2ba4072bdfd6bfa1.js"
     ],
     "/page": [
       "static/chunks/webpack-a39d4a046485dd81.js",
@@ -74,12 +73,13 @@
       "static/chunks/756-fa4b9ca91c8b1b6b.js",
       "static/chunks/app/page-7b549f2481267866.js"
     ],
-    "/rreth-nesh/page": [
+    "/kontakt/page": [
       "static/chunks/webpack-a39d4a046485dd81.js",
       "static/chunks/7b075a90-336e1beb9dddacdb.js",
       "static/chunks/474-105620bb27c31d97.js",
       "static/chunks/main-app-cd7d4004f90977ab.js",
-      "static/chunks/app/rreth-nesh/page-2ba4072bdfd6bfa1.js"
+      "static/chunks/480-71e89d96008c4dd2.js",
+      "static/chunks/app/kontakt/page-1a77a166700f8c4f.js"
     ]
   }
 }

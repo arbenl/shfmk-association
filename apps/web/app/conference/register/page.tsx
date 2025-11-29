@@ -24,6 +24,7 @@ type State = {
     email?: string[];
   };
   message?: string;
+  success?: boolean;
   registrationId?: string; // The only piece of state we need for the redirect
 };
 
@@ -64,7 +65,7 @@ export default function RegisterPage() {
         // The API now returns structured errors, which we can display.
         // The 'ALREADY_REGISTERED_RESENT' is a success case for the user.
         if (data.code === 'ALREADY_REGISTERED_RESENT') {
-          return { message: data.message };
+          return { message: data.message, success: true };
         }
         throw new Error(data.error ?? "Regjistrimi dështoi");
       }
@@ -128,7 +129,9 @@ export default function RegisterPage() {
                 </SelectContent>
               </Select>
             </div>
-            {state.message && <p className="text-sm text-red-500">{state.message}</p>}
+            {state.success && <p className="text-sm text-green-600 font-medium">{state.message}</p>}
+            {state.errors && !state.success && <p className="text-sm text-red-500">Ju lutemi korrigjoni gabimet.</p>}
+            {!state.success && state.message && <p className="text-sm text-red-500">{state.message}</p>}
             <Button type="submit" className="w-full">
               Regjistrohu & Merr QR Kodin
             </Button>

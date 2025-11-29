@@ -21,10 +21,17 @@ export function ensureServerEnv() {
   if (!SUPABASE_SERVICE_KEY) missing.push("SUPABASE_SERVICE_KEY");
   if (!RESEND_API_KEY) missing.push("RESEND_API_KEY");
   if (!RESEND_FROM_EMAIL) missing.push("RESEND_FROM_EMAIL");
-  if (!JWT_SECRET) missing.push("JWT_SECRET");
+
+  // In production, we strictly require the private key for security.
+  // In dev, we can fallback to generated keys (handled in API).
+  if (NODE_ENV === 'production' && !QR_PRIVATE_KEY_PEM) {
+    missing.push("QR_PRIVATE_KEY_PEM");
+  }
 
   if (missing.length > 0) {
     // This error is caught by the API route's try/catch block.
+    // We log it here too for visibility in server logs.
+    console.error(`[Server Config] Missing required env vars: ${missing.join(", ")}`);
     throw new Error(`Missing required env vars: ${missing.join(", ")}`);
   }
 }

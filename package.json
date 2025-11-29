@@ -4,15 +4,14 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.12.2",
   "scripts": {
-    "dev": "pnpm -C apps/web dev",
-    "dev:web": "pnpm -C apps/web dev",
-    "dev:scanner": "pnpm -C apps/scanner start",
-
-    "build": "pnpm -r build",
+    "dev": "pnpm --filter web dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:scanner": "pnpm --filter scanner start",
+    "build": "pnpm --filter web build",
+    "build:all": "pnpm -r build",
     "lint": "pnpm -r lint",
-
-    "scanner:start": "pnpm -C apps/scanner start",
-    "scanner:fix": "pnpm -C apps/scanner fix:expo",
-    "scanner:doctor": "pnpm -C apps/scanner doctor"
+    "scanner:start": "pnpm --filter scanner start",
+    "scanner:fix": "pnpm --filter scanner fix:expo",
+    "scanner:doctor": "pnpm --filter scanner doctor"
   }
 }
