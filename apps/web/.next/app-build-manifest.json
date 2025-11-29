@@ -1,25 +1,85 @@
 {
   "pages": {
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+    "/_not-found/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/app/_not-found/page-a1f2b68d63208552.js"
     ],
     "/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/layout.css",
-      "static/chunks/app/layout.js"
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/css/1469f8735078305d.css",
+      "static/chunks/756-fa4b9ca91c8b1b6b.js",
+      "static/chunks/109-bca92c7c682c19fc.js",
+      "static/chunks/app/layout-68211a661c938dd0.js"
+    ],
+    "/admin/login/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/480-71e89d96008c4dd2.js",
+      "static/chunks/app/admin/login/page-a80fa4d72e6932ed.js"
+    ],
+    "/admin/registrations/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/app/admin/registrations/page-3b26318dc2102d8c.js"
     ],
     "/conference/register/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/conference/register/page.js"
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/480-71e89d96008c4dd2.js",
+      "static/chunks/446-9d216a804bed1359.js",
+      "static/chunks/app/conference/register/page-2d3e045ee20212ad.js"
     ],
     "/conference/register/success/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/conference/register/success/page.js"
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/480-71e89d96008c4dd2.js",
+      "static/chunks/756-fa4b9ca91c8b1b6b.js",
+      "static/chunks/app/conference/register/success/page-9777506d42f4c481.js"
+    ],
+    "/konferenca/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/756-fa4b9ca91c8b1b6b.js",
+      "static/chunks/app/konferenca/page-123ccc84d4c56c0b.js"
+    ],
+    "/kontakt/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/480-71e89d96008c4dd2.js",
+      "static/chunks/app/kontakt/page-4477fe36e4ca8286.js"
+    ],
+    "/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/756-fa4b9ca91c8b1b6b.js",
+      "static/chunks/app/page-7b549f2481267866.js"
+    ],
+    "/rreth-nesh/page": [
+      "static/chunks/webpack-a39d4a046485dd81.js",
+      "static/chunks/7b075a90-336e1beb9dddacdb.js",
+      "static/chunks/474-105620bb27c31d97.js",
+      "static/chunks/main-app-cd7d4004f90977ab.js",
+      "static/chunks/app/rreth-nesh/page-2ba4072bdfd6bfa1.js"
     ]
   }
 }
