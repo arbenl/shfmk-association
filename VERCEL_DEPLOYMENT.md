@@ -85,11 +85,9 @@ Go to your Vercel Project Settings and ensure these values are set:
 
 - **Root Directory**: `apps/web`
 - **Framework Preset**: `Next.js`
-- **Build Command**: `cd ../.. && pnpm install && pnpm --filter web build`
-  - *Note: We override the default to ensure the root workspace is installed.*
-- **Install Command**: `echo 'Skipping install, using buildCommand'`
-  - *Note: We handle install in the build command to ensure workspace linking works.*
-- **Include files outside root directory**: **Enabled** (Required for `@shfmk/shared`)
+- **Install Command**: `cd ../.. && pnpm install`
+- **Build Command**: `cd ../.. && pnpm --filter web build`
+- **Include files outside root directory**: **Enabled** (Required!)
 
 ### Environment Variables (Production)
 
