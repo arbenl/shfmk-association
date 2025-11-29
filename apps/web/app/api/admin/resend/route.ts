@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSecret } from "@/lib/adminAuth";
-import { getConferenceById, getRegistrationById, saveQrToken } from "@/lib/supabase";
+import { getConferenceById, getRegistrationById } from "@/lib/supabase";
 import { createQrDataUrl } from "@/lib/qr";
 import { sendConfirmationEmail } from "@/lib/email";
-import { QR_PRIVATE_KEY_PEM } from "@/lib/env";
-import { RegistrationTokenPayload, signRegistrationToken } from "@shfmk/shared";
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-admin-secret");
@@ -30,28 +28,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Conference not found" }, { status: 404 });
   }
 
-  let token = registration.qr_token;
-  if (!token) {
-    const payload: RegistrationTokenPayload = {
-      sub: registration.id,
-      name: registration.full_name,
-      cat: registration.category,
-      conf: conference.slug,
-      fee: registration.fee_amount,
-      cur: registration.currency,
-      iat: Math.floor(new Date(registration.created_at).getTime() / 1000)
-    };
-    const signed = await signRegistrationToken(payload, QR_PRIVATE_KEY_PEM);
-    token = signed.token;
-    await saveQrToken(registration.id, token);
-  }
-
-  const qrDataUrl = await createQrDataUrl(token);
+  const qrDataUrl = await createQrDataUrl(registration.qr_token);
   await sendConfirmationEmail({
     to: registration.email,
     fullName: registration.full_name,
     qrDataUrl,
     conferenceName: conference.name,
+    conferenceLocation: conference.location,
+    conferenceStartDate: conference.start_date,
+    conferenceEndDate: conference.end_date,
     category: registration.category,
     fee: registration.fee_amount,
     currency: registration.currency

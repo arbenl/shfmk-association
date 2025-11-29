@@ -24,10 +24,7 @@ type State = {
     email?: string[];
   };
   message?: string;
-  token?: string;
-  name?: string;
-  cat?: string;
-  emailError?: string;
+  registrationId?: string; // The only piece of state we need for the redirect
 };
 
 export default function RegisterPage() {
@@ -55,37 +52,40 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validatedFields.data),
       });
+
+      // Safe JSON parsing: check content-type before parsing
+      const contentType = res.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error("Serveri ktheu një përgjigje të pavlefshme. Ju lutemi provoni përsëri.");
+      }
+
       const data = await res.json();
       if (!res.ok) {
+        // The API now returns structured errors, which we can display.
+        // The 'ALREADY_REGISTERED_RESENT' is a success case for the user.
+        if (data.code === 'ALREADY_REGISTERED_RESENT') {
+          return { message: data.message };
+        }
         throw new Error(data.error ?? "Regjistrimi dështoi");
       }
-      
+
+      // On success, we only need the registration ID for the redirect.
       return {
-        token: data.token,
-        name: validatedFields.data.fullName,
-        cat: validatedFields.data.category,
-        emailError: data.emailError,
+        registrationId: data.registrationId,
       };
     } catch (err) {
-      return { message: (err as Error).message };
+      return { message: (err as Error).message ?? "Një gabim i papritur ndodhi gjatë dërgimit të kërkesës." };
     }
   };
-  
+
   const [state, formAction] = useFormState(handleSubmit, {});
 
   useEffect(() => {
-    if (state.token) {
-      const params = new URLSearchParams({
-        token: state.token,
-        name: state.name || "",
-        cat: state.cat || "",
-      });
-      if (state.emailError) {
-        params.set("emailError", state.emailError);
-      }
-      router.push(`/conference/register/success?${params.toString()}`);
+    // New robust redirect logic
+    if (state.registrationId) {
+      router.push(`/conference/register/success?rid=${state.registrationId}`);
     }
-  }, [state, router]);
+  }, [state.registrationId, router]);
 
   return (
     <div className="container mx-auto px-4 py-12">

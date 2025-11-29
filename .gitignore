@@ -6,6 +6,7 @@ node_modules/
 # pnpm store directories
 .pnpm/
 **/.pnpm/
+**/.pnpm-store/
 
 # Logs
 *.log
@@ -17,3 +18,21 @@ pnpm-debug.log*
 # IDE settings
 .vscode/
 .DS_Store
+
+# Next.js build output
+.next/
+
+# Supabase temporary files
+supabase/.temp/
+
+# Generated artifacts
+dist/
+build/
+
+# Secrets and local environment
+.env
+.env.*
+keys/
+*.pem
+apps/web/.env.local
+apps/scanner/.env

@@ -19,7 +19,8 @@ export default function ContactPage() {
             </p>
             <div className="mt-4 grid gap-2">
               <p><strong>Email:</strong> info@shfmk.org</p>
-              <p><strong>Telefon:</strong> +383 44 123 456</p>
+              <p><strong>Telefon:</strong> +383 44 629 856</p>
+              <p><strong>Telefon:</strong> +383 49 595 475</p>
               <p><strong>Adresa:</strong> Rr. Universiteti, p.n., 10000 Prishtinë</p>
             </div>
           </div>

@@ -1,13 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/admin/registrations/page": "app/admin/registrations/page.js",
-  "/api/admin/registrations/route": "app/api/admin/registrations/route.js",
-  "/api/admin/resend/route": "app/api/admin/resend/route.js",
-  "/conference/register/success/page": "app/conference/register/success/page.js",
+  "/api/resend-public/route": "app/api/resend-public/route.js",
   "/conference/register/page": "app/conference/register/page.js",
-  "/api/register/route": "app/api/register/route.js",
-  "/konferenca/page": "app/konferenca/page.js",
-  "/page": "app/page.js",
-  "/rreth-nesh/page": "app/rreth-nesh/page.js",
-  "/kontakt/page": "app/kontakt/page.js"
+  "/conference/register/success/page": "app/conference/register/success/page.js"
 }

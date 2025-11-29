@@ -26,3 +26,17 @@ export async function saveCheckIn(entry: LocalCheckIn) {
   const updated = [entry, ...current.filter((c) => c.registrationId !== entry.registrationId)];
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 }
+
+export async function clearCheckIns(): Promise<void> {
+  await AsyncStorage.removeItem(STORAGE_KEY);
+}
+
+const ADMIN_SECRET_KEY = "shfmk_admin_secret";
+
+export async function saveAdminSecret(secret: string): Promise<void> {
+  await AsyncStorage.setItem(ADMIN_SECRET_KEY, secret);
+}
+
+export async function getAdminSecret(): Promise<string> {
+  return (await AsyncStorage.getItem(ADMIN_SECRET_KEY)) ?? "";
+}

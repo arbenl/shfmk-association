@@ -31,13 +31,43 @@ create table if not exists registrations (
   currency text not null default 'EUR',
   payment_status text not null default 'pending',
   checked_in_at timestamptz,
-  qr_token text,
-  created_at timestamptz not null default now()
+  qr_token text not null,
+  created_at timestamptz not null default now(),
+  unique (conference_id, email)
 );
 
 create index if not exists registrations_conference_idx on registrations(conference_id);
 create index if not exists registrations_email_idx on registrations(email);
 create index if not exists registrations_created_idx on registrations(created_at desc);
+
+-- Function for bulk updating check-in status
+create or replace function bulk_update_checkins(payload jsonb)
+returns integer
+language plpgsql
+as $$
+declare
+  item jsonb;
+  updated_count integer := 0;
+  reg_id uuid;
+  scan_time timestamptz;
+begin
+  for item in select * from jsonb_array_elements(payload)
+  loop
+    reg_id := (item->>'registrationId')::uuid;
+    scan_time := (item->>'scannedAt')::timestamptz;
+    
+    update registrations
+    set checked_in_at = scan_time
+    where id = reg_id and checked_in_at is null;
+    
+    if found then
+      updated_count := updated_count + 1;
+    end if;
+  end loop;
+  
+  return updated_count;
+end;
+$$;
 
 -- Seed conference
 insert into conferences (name, slug, start_date, end_date, location, registration_open, registration_close, max_participants, currency, member_fee, non_member_fee, student_fee)

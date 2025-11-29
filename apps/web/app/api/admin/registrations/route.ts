@@ -4,13 +4,6 @@ import { CONFERENCE_SLUG } from "@/lib/env";
 import { getConferenceBySlug, listRegistrations } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret");
-  try {
-    verifyAdminSecret(secret);
-  } catch (error) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const url = new URL(req.url);
   const search = url.searchParams.get("q") ?? undefined;
   const slug = url.searchParams.get("conf") ?? CONFERENCE_SLUG;

@@ -1,16 +1,21 @@
 import "expo-standard-web-crypto";
 import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View, Share, ScrollView } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Share, ScrollView, TextInput, ActivityIndicator } from "react-native";
 import { Camera, CameraPermissionStatus, CameraType, BarCodeScannedResult } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
 import { verifyRegistrationToken } from "@shfmk/shared";
 import { getPublicKeyPem } from "./constants";
-import { getCheckIns, saveCheckIn } from "./storage";
+import { getCheckIns, saveCheckIn, clearCheckIns, getAdminSecret, saveAdminSecret } from "./storage";
 
 type ScanState =
   | { status: "idle" }
   | { status: "valid"; repeat: boolean; payload: { name: string; cat: string; conf: string; sub: string } }
   | { status: "invalid"; message: string };
+
+type SyncState = "idle" | "syncing" | "success" | "error";
+
+// IMPORTANT: Replace with your production web app URL
+const API_BASE_URL = "http://localhost:3000";
 
 export default function App() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -20,16 +25,25 @@ export default function App() {
   const [checkIns, setCheckIns] = useState<
     { registrationId: string; scannedAt: string; name: string; cat: string; conf: string }[]
   >([]);
+  const [adminSecret, setAdminSecret] = useState("");
+  const [syncStatus, setSyncStatus] = useState<SyncState>("idle");
+  const [lastSyncMessage, setLastSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const requestPermissions = async () => {
+    const init = async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === CameraPermissionStatus.GRANTED);
-    };
+      
+      const key = await getPublicKeyPem();
+      setPublicKeyPem(key);
 
-    requestPermissions();
-    getPublicKeyPem().then((key) => setPublicKeyPem(key));
-    getCheckIns().then(setCheckIns);
+      const storedCheckins = await getCheckIns();
+      setCheckIns(storedCheckins);
+      
+      const secret = await getAdminSecret();
+      setAdminSecret(secret);
+    };
+    init();
   }, []);
 
   const statusColor = useMemo(() => {
@@ -42,7 +56,7 @@ export default function App() {
   async function handleBarCodeScanned(result: BarCodeScannedResult) {
     setScanned(true);
     if (!publicKeyPem) {
-      setScanState({ status: "invalid", message: "Public key missing." });
+      setScanState({ status: "invalid", message: "Çelësi publik mungon. Riniseni app-in." });
       return;
     }
 
@@ -65,13 +79,41 @@ export default function App() {
         setScanState({ status: "valid", repeat: true, payload });
       }
     } catch (error) {
-      setScanState({ status: "invalid", message: "Invalid or malformed token." });
+      setScanState({ status: "invalid", message: "Kodi QR është i pavlefshëm ose i korruptuar." });
     }
   }
 
-  async function exportCheckIns() {
-    const payload = JSON.stringify(checkIns, null, 2);
-    await Share.share({ message: payload });
+  async function handleSync() {
+    if (syncStatus === 'syncing' || checkIns.length === 0) return;
+    
+    setSyncStatus('syncing');
+    setLastSyncMessage(null);
+    await saveAdminSecret(adminSecret);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/checkin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": adminSecret,
+        },
+        body: JSON.stringify(checkIns.map(c => ({ registrationId: c.registrationId, scannedAt: c.scannedAt }))),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Sync failed");
+      }
+      
+      await clearCheckIns();
+      setCheckIns([]);
+      setSyncStatus('success');
+      setLastSyncMessage(`Sukses! ${data.updated} rekorde u sinkronizuan.`);
+
+    } catch (err) {
+      setSyncStatus('error');
+      setLastSyncMessage(`Gabim: ${(err as Error).message}`);
+    }
   }
 
   if (hasPermission === null) {
@@ -96,24 +138,26 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <Text style={styles.title}>SHFMK Scanner</Text>
-      <Text style={styles.subTitle}>Offline QR verification</Text>
+      <Text style={styles.subTitle}>Verifikim offline i kodeve QR</Text>
 
-      <View style={[styles.statusCard, { borderColor: statusColor }]}>
+      {/* SCANNER UI */}
+      <View style={[styles.statusCard, { borderColor: statusColor, backgroundColor: statusColor + '20' }]}>
         {scanState.status === "valid" && (
           <>
-            <Text style={styles.statusLabel}>{scanState.repeat ? "Already checked-in" : "Valid"}</Text>
-            <Text style={styles.name}>{scanState.payload.name}</Text>
+            <Text style={[styles.statusLabel, { color: statusColor, fontSize: 22 }]}>{scanState.repeat ? "⚠️ E përdorur" : "✅ E vlefshme"}</Text>
+            <Text style={[styles.name, { marginTop: 8 }]}>{scanState.payload.name}</Text>
             <Text style={styles.detail}>{scanState.payload.cat}</Text>
-            <Text style={styles.detail}>Conf: {scanState.payload.conf}</Text>
+            <Text style={styles.detail}>Konferenca: {scanState.payload.conf}</Text>
+            <Text style={[styles.statusInstructions, { color: statusColor }]}>{scanState.repeat ? "Vëmendje: Ky person tashmë është bërë check-in!" : "Lejo hyrjen"}</Text>
           </>
         )}
         {scanState.status === "invalid" && (
           <>
-            <Text style={styles.statusLabel}>Invalid token</Text>
-            <Text style={styles.detail}>{scanState.message}</Text>
+            <Text style={[styles.statusLabel, { color: statusColor, fontSize: 22 }]}>❌ E pavlefshme</Text>
+            <Text style={[styles.statusInstructions, { color: statusColor, marginTop: 8 }]}>{scanState.message}</Text>
           </>
         )}
-        {scanState.status === "idle" && <Text style={styles.detail}>Ready to scan</Text>}
+        {scanState.status === "idle" && <Text style={styles.detail}>Gati për skenim</Text>}
       </View>
 
       <View style={styles.scannerBox}>
@@ -124,26 +168,27 @@ export default function App() {
         />
       </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity style={[styles.button, styles.secondary]} onPress={() => setScanned(false)}>
-          <Text style={styles.buttonText}>Scan again</Text>
+      <TouchableOpacity style={[styles.button, styles.secondary, { marginBottom: 16 }]} onPress={() => setScanned(false)} disabled={!scanned}>
+        <Text style={styles.buttonText}>Skano prapë</Text>
+      </TouchableOpacity>
+
+      {/* SYNC UI */}
+      <View style={styles.syncBox}>
+         <Text style={styles.detail}>Të dhënat e pa-sinkronizuara: {checkIns.length}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Admin Secret"
+          placeholderTextColor="#94a3b8"
+          value={adminSecret}
+          onChangeText={setAdminSecret}
+          secureTextEntry
+        />
+        <TouchableOpacity style={styles.button} onPress={handleSync} disabled={syncStatus === 'syncing' || checkIns.length === 0}>
+          {syncStatus === 'syncing' ? <ActivityIndicator color="#e2e8f0" /> : <Text style={styles.buttonText}>Sinkronizo</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={exportCheckIns}>
-          <Text style={styles.buttonText}>Export check-ins</Text>
-        </TouchableOpacity>
+        {lastSyncMessage && <Text style={[styles.detail, { marginTop: 8, textAlign: 'center', color: syncStatus === 'error' ? '#fca5a5' : '#86efac' }]}>{lastSyncMessage}</Text>}
       </View>
 
-      <ScrollView style={styles.list}>
-        {checkIns.map((c) => (
-          <View key={c.registrationId} style={styles.listItem}>
-            <View>
-              <Text style={styles.nameSmall}>{c.name}</Text>
-              <Text style={styles.detail}>{c.cat}</Text>
-            </View>
-            <Text style={styles.detail}>{new Date(c.scannedAt).toLocaleTimeString()}</Text>
-          </View>
-        ))}
-      </ScrollView>
     </View>
   );
 }
@@ -153,7 +198,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0f172a",
     alignItems: "center",
-    paddingTop: 60
+    paddingTop: 60,
+    paddingHorizontal: '5%'
   },
   title: {
     color: "#e2e8f0",
@@ -165,16 +211,23 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   statusCard: {
-    width: "90%",
+    width: "100%",
     borderWidth: 2,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 12
+    marginBottom: 12,
+    minHeight: 150,
+    justifyContent: 'center'
   },
   statusLabel: {
     color: "#e2e8f0",
     fontWeight: "700",
     fontSize: 18
+  },
+  statusInstructions: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 4
   },
   name: {
     color: "#e2e8f0",
@@ -189,22 +242,16 @@ const styles = StyleSheet.create({
     color: "#cbd5e1"
   },
   scannerBox: {
-    width: "90%",
-    height: 280,
+    width: "100%",
+    aspectRatio: 1,
+    maxHeight: 320,
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: "#111827",
     marginBottom: 12
   },
-  actions: {
-    width: "90%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 12
-  },
   button: {
-    flex: 1,
+    width: '100%',
     backgroundColor: "#22c55e",
     padding: 12,
     borderRadius: 12,
@@ -214,21 +261,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#1f2937"
   },
   buttonText: {
-    color: "#0f172a",
+    color: "#e2e8f0",
     fontWeight: "700"
-  },
-  list: {
-    width: "90%",
-    marginTop: 6
-  },
-  listItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1f2937"
   },
   text: {
     color: "#e2e8f0"
+  },
+  syncBox: {
+    width: '100%',
+    padding: 12,
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+    gap: 10
+  },
+  input: {
+    backgroundColor: '#334155',
+    color: '#e2e8f0',
+    padding: 10,
+    borderRadius: 8
   }
 });
+

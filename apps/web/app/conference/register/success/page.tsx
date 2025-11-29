@@ -1,55 +1,34 @@
-"use client";
-
-import { createQrDataUrl } from "@/lib/qr";
+import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { getRegistrationById } from "@/lib/supabase";
+import { createQrDataUrl } from "@/lib/qr";
+import { ResendButton } from "./ResendButton"; // A new client component
+import { PrintButton } from "./PrintButton";
 
-function SuccessPageContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-  const name = searchParams.get("name");
-  const cat = searchParams.get("cat");
-  const emailError = searchParams.get("emailError");
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+interface SuccessPageProps {
+  searchParams: {
+    rid?: string;
+  };
+}
 
-  useEffect(() => {
-    if (token) {
-      createQrDataUrl(token).then(setQrDataUrl);
-    }
-  }, [token]);
+// This is now a Server Component
+export default async function SuccessPage({ searchParams }: SuccessPageProps) {
+  const registrationId = searchParams.rid;
 
-  if (!token) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <Card className="mx-auto max-w-lg">
-          <CardHeader>
-            <CardTitle>Regjistrim i Pa Vlefshëm</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Tokeni i QR kodit mungon. Ju lutemi kthehuni te forma e regjistrimit dhe provoni përsëri.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!registrationId) {
+    return <InvalidState />;
   }
 
-  const handleDownload = () => {
-    if (!qrDataUrl) return;
-    const link = document.createElement("a");
-    link.href = qrDataUrl;
-    link.download = "shfmk-konferenca-qr.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  const handleResendEmail = async () => {
-    // This requires an API endpoint that can resend the email given a token or registration ID.
-    // For now, we will just show an alert.
-    alert("Funksionaliteti për ridërgesën e email-it do të shtohet së shpejti.");
-  };
+  // Fetch data directly on the server
+  const registration = await getRegistrationById(registrationId);
+
+  if (!registration) {
+    return <InvalidState message="Regjistrimi me këtë ID nuk u gjet." />;
+  }
+
+  const qrDataUrl = await createQrDataUrl(registration.qr_token);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -58,17 +37,29 @@ function SuccessPageContent() {
           <CardTitle className="text-2xl">Regjistrimi u krye me sukses!</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <p>Faleminderit për regjistrimin tuaj, {name}. Ruajeni këtë kod QR pasi që është bileta juaj për konferencë.</p>
-          <div className="flex justify-center">
-            {qrDataUrl && <img src={qrDataUrl} alt="QR Code" width={240} height={240} />}
+          <p>Faleminderit për regjistrimin tuaj, {registration.full_name}. Ruajeni këtë kod QR pasi që është bileta juaj për konferencë.</p>
+          <div className="flex justify-center bg-white p-4 rounded-lg">
+            {qrDataUrl ? <img src={qrDataUrl} alt="QR Code" width={240} height={240} /> : <div className="w-[240px] h-[240px] bg-gray-200 animate-pulse rounded-md" />}
           </div>
-          {cat && <p className="text-lg font-semibold">{cat}</p>}
-          {emailError && <p className="text-sm text-red-500">Dërgesa e email-it dështoi: {emailError}.</p>}
+
+          <div className="text-left bg-gray-50 p-4 rounded-lg space-y-2">
+            <h3 className="font-semibold text-lg text-blue-600">Detajet e Pagesës për Pjesëmarrje</h3>
+            <div className="text-sm space-y-1">
+              <p><strong>Banka:</strong> Pro Credit Bank</p>
+              <p><strong>Nr. i llogarisë:</strong> 1110240460000163</p>
+              <p><strong>Emri i llogarisë:</strong> KOSOVA FARMACEUTICAL SOCIETY</p>
+              <p><strong>Adresa:</strong> Prishtinë</p>
+              <p><strong>Përshkrimi:</strong> {registration.full_name}, pagesë për konferencë</p>
+              <p><strong>Vlera për pagesë:</strong> {registration.fee_amount}.00 {registration.currency}</p>
+            </div>
+          </div>
+
           <div className="flex justify-center gap-4">
-            <Button onClick={handleDownload} disabled={!qrDataUrl}>Shkarko QR</Button>
-            <Button onClick={handleResendEmail} variant="outline">
-              Dërgo përsëri emailin
-            </Button>
+            <PrintButton disabled={!qrDataUrl} />
+            {/* The Resend button is now its own Client Component to manage its state */}
+            <Suspense>
+              <ResendButton registrationId={registration.id} />
+            </Suspense>
           </div>
         </CardContent>
       </Card>
@@ -76,10 +67,18 @@ function SuccessPageContent() {
   );
 }
 
-export default function SuccessPage() {
+function InvalidState({ message }: { message?: string }) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SuccessPageContent />
-    </Suspense>
+    <div className="container mx-auto px-4 py-12">
+      <Card className="mx-auto max-w-lg">
+        <CardHeader><CardTitle>Regjistrim i Pavlefshëm</CardTitle></CardHeader>
+        <CardContent className="grid gap-2">
+          <p>{message || "Të dhënat e regjistrimit mungojnë. Ju lutemi provoni përsëri."}</p>
+          <Link href="/conference/register">
+            <Button variant="outline">Kthehu te Regjistrimi</Button>
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
