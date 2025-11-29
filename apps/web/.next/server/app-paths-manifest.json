@@ -1,5 +1,4 @@
 {
-  "/page": "app/page.js",
-  "/conference/register/page": "app/conference/register/page.js",
-  "/api/register/route": "app/api/register/route.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js"
 }
