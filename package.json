@@ -1,0 +1,15 @@
+{
+  "name": "shfmk",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.23.0",
+  "scripts": {
+    "dev:web": "pnpm -C apps/web dev",
+    "dev:scanner": "pnpm -C apps/scanner start",
+    "scanner:start": "pnpm -C apps/scanner start",
+    "scanner:fix": "pnpm -C apps/scanner fix:expo",
+    "scanner:doctor": "pnpm -C apps/scanner doctor",
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build"
+  }
+}

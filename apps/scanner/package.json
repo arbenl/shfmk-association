@@ -1,0 +1,32 @@
+{
+  "name": "scanner",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "pnpm exec expo start",
+    "start:clear": "pnpm exec expo start -c",
+    "fix:expo": "npx expo install --fix",
+    "doctor": "npx expo-doctor",
+    "android": "pnpm exec expo start --android",
+    "ios": "pnpm exec expo start --ios",
+    "web": "pnpm exec expo start --web",
+    "lint": "eslint \"**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@shfmk/shared": "workspace:*",
+    "expo": "~51.0.26",
+    "expo-camera": "~15.0.9",
+    "expo-standard-web-crypto": "~1.0.0",
+    "expo-status-bar": "~1.12.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native": "0.74.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~18.3.4",
+    "typescript": "^5.6.3"
+  }
+}
