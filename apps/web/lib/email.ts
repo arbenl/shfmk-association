@@ -21,18 +21,18 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
     throw new Error("Missing RESEND_FROM_EMAIL.");
   }
 
-  const subject = `Your SHFMK conference registration QR`;
+  const subject = `Regjistrimi juaj për konferencën e SHFK`;
   const html = `
     <div style="font-family: Arial, sans-serif; color: #111;">
-      <p>Pershendetje ${input.fullName},</p>
-      <p>Faleminderit për regjistrimin në <strong>${input.conferenceName}</strong>.</p>
-      <p>Kategoria: <strong>${input.category}</strong> | Pagesa: <strong>${input.fee} ${input.currency}</strong></p>
-      <p>Ky është QR-ja juaj (ruajeni si screenshot). Kontrollimi bëhet offline me çelës publik.</p>
+      <p>Përshëndetje ${input.fullName},</p>
+      <p>Faleminderit për regjistrimin tuaj në konferencën <strong>"${input.conferenceName}"</strong>.</p>
+      <p>Kategoria juaj e regjistrimit është: <strong>${input.category}</strong>. Kostoja e pjesëmarrjes është <strong>${input.fee} ${input.currency}</strong>.</p>
+      <p>Më poshtë gjeni kodin tuaj QR. Ju lutemi ruajeni këtë kod (p.sh. si screenshot), pasi që do të përdoret për identifikimin tuaj në hyrje të konferencës. Skanimi i kodit bëhet pa pasur nevojë për internet.</p>
       <p style="text-align:center;">
-        <img src="${input.qrDataUrl}" alt="QR" style="width:220px;height:220px;border:1px solid #eee;padding:8px;border-radius:12px;" />
+        <img src="${input.qrDataUrl}" alt="Kodi QR" style="width:220px;height:220px;border:1px solid #eee;padding:8px;border-radius:12px;" />
       </p>
-      <p>Nëse QR nuk shfaqet, mund ta hapni nga faqja e suksesit: ${SITE_BASE_URL}/conference/register/success</p>
-      <p>Respekte,<br />Shoqata Farmaceutike e Kosovës</p>
+      <p>Nëse kodi QR nuk shfaqet, ju lutemi vizitoni <a href="${SITE_BASE_URL}/conference/register/success?token=${input.qrDataUrl}">faqen e suksesit të regjistrimit</a>.</p>
+      <p>Me respekt,<br />Shoqata Farmaceutike e Kosovës</p>
     </div>
   `;
 

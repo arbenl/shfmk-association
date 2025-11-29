@@ -1,117 +1,140 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormEvent, useEffect } from "react";
 
-type Category = "member" | "non_member" | "student";
+const schema = z.object({
+  fullName: z.string().min(1, "Emri i plotë është i detyrueshëm"),
+  email: z.string().email("Email-i nuk është i vlefshëm"),
+  phone: z.string().optional(),
+  institution: z.string().optional(),
+  category: z.enum(["member", "non_member", "student"]),
+});
+
+type State = {
+  errors?: {
+    fullName?: string[];
+    email?: string[];
+  };
+  message?: string;
+  token?: string;
+  name?: string;
+  cat?: string;
+  emailError?: string;
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setLoading(true);
+  const handleSubmit = async (prevState: State, formData: FormData): Promise<State> => {
+    const validatedFields = schema.safeParse({
+      fullName: formData.get("fullName"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      institution: formData.get("institution"),
+      category: formData.get("category"),
+    });
 
-    const formData = new FormData(event.currentTarget);
-    const payload = {
-      fullName: String(formData.get("fullName") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
-      institution: String(formData.get("institution") ?? ""),
-      category: String(formData.get("category") ?? "non_member") as Category
-    };
+    if (!validatedFields.success) {
+      return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Ju lutemi korrigjoni gabimet në formë.",
+      };
+    }
 
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(validatedFields.data),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Registration failed");
+        throw new Error(data.error ?? "Regjistrimi dështoi");
       }
-
-      const params = new URLSearchParams({
+      
+      return {
         token: data.token,
-        name: payload.fullName,
-        cat: payload.category
+        name: validatedFields.data.fullName,
+        cat: validatedFields.data.category,
+        emailError: data.emailError,
+      };
+    } catch (err) {
+      return { message: (err as Error).message };
+    }
+  };
+  
+  const [state, formAction] = useFormState(handleSubmit, {});
+
+  useEffect(() => {
+    if (state.token) {
+      const params = new URLSearchParams({
+        token: state.token,
+        name: state.name || "",
+        cat: state.cat || "",
       });
-      if (data.emailError) {
-        params.set("emailError", data.emailError);
+      if (state.emailError) {
+        params.set("emailError", state.emailError);
       }
       router.push(`/conference/register/success?${params.toString()}`);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
     }
-  }
+  }, [state, router]);
 
   return (
-    <div className="grid" style={{ gap: 18 }}>
-      <div className="grid" style={{ gap: 6 }}>
-        <span className="pill">Conference registration</span>
-        <h1 style={{ margin: 0 }}>Save your spot</h1>
-        <p style={{ margin: 0, color: "#cbd5e1" }}>
-          Fill the form to receive a signed QR badge. Please use a valid email to receive your copy,
-          but you will also see the QR immediately after submitting.
-        </p>
-      </div>
-
-      <form className="card grid" style={{ gap: 14 }} onSubmit={handleSubmit}>
-        <div>
-          <label className="label" htmlFor="fullName">
-            Full name
-          </label>
-          <input required className="input" name="fullName" id="fullName" placeholder="Emri i plotë" />
-        </div>
-        <div>
-          <label className="label" htmlFor="email">
-            Email
-          </label>
-          <input required className="input" type="email" name="email" id="email" placeholder="email@shembull.com" />
-        </div>
-        <div className="grid" style={{ gap: 12, gridTemplateColumns: "1fr 1fr" }}>
-          <div>
-            <label className="label" htmlFor="phone">
-              Phone
-            </label>
-            <input className="input" name="phone" id="phone" placeholder="+383 ..." />
-          </div>
-          <div>
-            <label className="label" htmlFor="institution">
-              Institution
-            </label>
-            <input className="input" name="institution" id="institution" placeholder="QKUK / University / Pharmacy" />
-          </div>
-        </div>
-        <div>
-          <label className="label" htmlFor="category">
-            Category
-          </label>
-          <select className="input" name="category" id="category" defaultValue="non_member">
-            <option value="member">Member</option>
-            <option value="non_member">Non-member</option>
-            <option value="student">Student</option>
-          </select>
-        </div>
-
-        {error && (
-          <div style={{ color: "#fca5a5", fontWeight: 600 }}>
-            {error}
-          </div>
-        )}
-
-        <div className="actions">
-          <button className="btn" type="submit" disabled={loading}>
-            {loading ? "Processing..." : "Submit & get QR"}
-          </button>
-        </div>
-      </form>
+    <div className="container mx-auto px-4 py-12">
+      <Card className="mx-auto max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl">Regjistrohu në Konferencë</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={formAction} className="grid gap-4">
+            <div>
+              <Label htmlFor="fullName">Emri i plotë</Label>
+              <Input required id="fullName" name="fullName" placeholder="Emri i plotë" />
+              {state.errors?.fullName && <p className="text-sm text-red-500">{state.errors.fullName}</p>}
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input required type="email" id="email" name="email" placeholder="email@shembull.com" />
+              {state.errors?.email && <p className="text-sm text-red-500">{state.errors.email}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone">Telefon (opsional)</Label>
+                <Input id="phone" name="phone" placeholder="+383..." />
+              </div>
+              <div>
+                <Label htmlFor="institution">Institucioni (opsional)</Label>
+                <Input id="institution" name="institution" placeholder="QKUK / Farmaci" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="category">Kategoria</Label>
+              <Select name="category" defaultValue="non_member">
+                <SelectTrigger>
+                  <SelectValue placeholder="Zgjidh kategorinë" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">Anëtar</SelectItem>
+                  <SelectItem value="non_member">Jo-anëtar</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {state.message && <p className="text-sm text-red-500">{state.message}</p>}
+            <Button type="submit" className="w-full">
+              Regjistrohu & Merr QR Kodin
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
