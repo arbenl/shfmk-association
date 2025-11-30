@@ -1,7 +1,4 @@
-import { Resend } from "resend";
-import { RESEND_API_KEY, RESEND_FROM_EMAIL, SITE_BASE_URL, NODE_ENV } from "./env";
-
-const resendClient = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+import { sendEmail } from "./email/resend";
 
 export interface ConfirmationEmailInput {
   to: string;
@@ -12,25 +9,14 @@ export interface ConfirmationEmailInput {
   conferenceStartDate: string | null;
   conferenceEndDate: string | null;
   category: string;
+  participationType: string;
+  points: number;
   fee: number;
   currency: string;
+  verifyUrl?: string;
 }
 
 export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
-  // Check if Resend client is configured
-  if (!resendClient) {
-    const errorMsg = "RESEND_API_KEY is not configured. Cannot send confirmation email.";
-    console.error(`[sendConfirmationEmail] ${errorMsg}`);
-    throw new Error(errorMsg);
-  }
-
-  // Validate FROM email address
-  if (!RESEND_FROM_EMAIL) {
-    const errorMsg = "RESEND_FROM_EMAIL is not configured. Cannot send confirmation email.";
-    console.error(`[sendConfirmationEmail] ${errorMsg}`);
-    throw new Error(errorMsg);
-  }
-
   const subject = `Regjistrimi juaj për konferencën e SHFK`;
 
   let conferenceDetails = "";
@@ -50,8 +36,11 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
       <h3 style="color: #2563eb; margin-top: 24px;">Kodi Juaj QR</h3>
       <p>Më poshtë gjeni kodin tuaj QR. Ju lutemi ruajeni këtë kod (p.sh. si screenshot), pasi që do të përdoret për identifikimin tuaj në hyrje të konferencës. Skanimi i kodit bëhet pa pasur nevojë për internet.</p>
       <p style="text-align:center; margin: 20px 0;">
-        <img src="cid:qr-code" alt="Kodi QR" style="width:220px;height:220px;border:1px solid #eee;padding:8px;border-radius:12px;" />
+        <img src="cid:qr-code" alt="Kodi Juaj QR" style="width:220px;height:220px;border:1px solid #eee;padding:8px;border-radius:12px;" />
       </p>
+      ${input.verifyUrl ? `<p style="text-align:center; font-size: 13px; color: #374151; margin-top: 8px;">
+        Nëse imazhi nuk shfaqet, hapni këtë link: <a href="${input.verifyUrl}">${input.verifyUrl}</a>
+      </p>` : ""}
       
       <h3 style="color: #2563eb; margin-top: 24px;">Detajet e Pagesës për Pjesëmarrje</h3>
       <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
@@ -63,9 +52,12 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
         <p style="margin: 8px 0;"><strong>Vlera për pagesë:</strong> ${input.fee}.00 ${input.currency}</p>
       </div>
       
-      <p style="margin-top: 20px;"><strong>Kategoria juaj e regjistrimit:</strong> ${input.category}</p>
+      <p style="margin-top: 16px;"><strong>Kategoria:</strong> ${input.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}</p>
+      <p style="margin-top: 4px;"><strong>Pjesëmarrja:</strong> ${input.participationType === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"} (${input.points} pikë)</p>
       
       <p style="margin-top: 24px;">Nëse kodi QR nuk shfaqet, ju lutemi vizitoni faqen e suksesit të regjistrimit duke përdorur linkun që ju është dërguar.</p>
+      <p style="margin-top: 12px; font-size:13px; color:#374151;">Pjesëmarrës pasiv (ndjekës): 12 pikë. Pjesëmarrës aktiv (vetëm ligjërues/prezentues): 15 pikë.</p>
+      <p style="margin-top: 4px; font-size:12px; color:#6b7280;"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit (jo për pjesëmarrësit e zakonshëm).</p>
       
       <p style="margin-top: 32px;">Me respekt,<br /><strong>Shoqata Farmaceutike e Kosovës</strong></p>
       <p style="font-size: 12px; color: #666; margin-top: 16px;">
@@ -74,34 +66,21 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
     </div>
   `;
 
-  console.log(`[sendConfirmationEmail] Attempting to send email to: ${input.to}`);
-  console.log(`[sendConfirmationEmail] From: ${RESEND_FROM_EMAIL}`);
-  console.log(`[sendConfirmationEmail] Subject: ${subject}`);
-
-  try {
-    const { data, error } = await resendClient.emails.send({
-      from: `Shoqata Farmaceutike e Kosovës <${RESEND_FROM_EMAIL}>`,
-      to: input.to,
-      subject,
-      html,
-      attachments: [
-        {
-          filename: 'qrcode.png',
-          content: input.qrBuffer,
-          content_id: 'qr-code',
-        } as any,
-      ],
-    });
-
-    if (error) {
-      console.error(`[sendConfirmationEmail] Resend API error:`, error);
-      throw new Error(`Resend API error: ${error.message}`);
-    }
-
-    console.log(`[sendConfirmationEmail] ✅ Email sent successfully to ${input.to}. Provider ID: ${data?.id}`);
-    return data;
-  } catch (error) {
-    console.error(`[sendConfirmationEmail] ❌ Email send failed for ${input.to}:`, error);
-    throw new Error(`Email send failed: ${(error as Error).message}`);
-  }
+  return sendEmail({
+    to: input.to,
+    subject,
+    html,
+    attachments: [
+      {
+        filename: "qr.png",
+        content: input.qrBuffer,
+        // CID for inline image rendering in clients (Gmail/Outlook)
+        content_id: "qr-code",
+        contentId: "qr-code",
+        cid: "qr-code",
+        disposition: "inline",
+        contentType: "image/png",
+      } as any,
+    ],
+  });
 }

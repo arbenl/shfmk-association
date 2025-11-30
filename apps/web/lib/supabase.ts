@@ -148,8 +148,19 @@ export interface RegistrationRow {
   qr_token: string;
   fee_amount: number;
   currency: string;
+  payment_status: string;
+  phone?: string | null;
+  institution?: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
+  participation_type: string;
+  points: number;
+  email_status: string;
+  email_attempts: number;
+  email_last_error: string | null;
+  email_sent_at: string | null;
+  resend_last_at: string | null;
+  resend_count: number;
   created_at: string;
 }
 
@@ -186,21 +197,26 @@ export async function createRegistration(params: {
   phone?: string;
   institution?: string;
   category: RegistrationCategory;
+  participationType: "pasiv" | "aktiv";
+  points: number;
   feeAmount: number;
   currency: string;
   qrToken: string; // The pre-generated JWT for the QR code
 }): Promise<RegistrationRow> {
   const client = requireClient();
+  const normalizedEmail = params.email.toLowerCase().trim();
   const { data, error } = await client
     .from("registrations")
     .insert({
       id: params.id,
       conference_id: params.conferenceId,
       full_name: params.fullName,
-      email: params.email.toLowerCase().trim(),
+      email: normalizedEmail,
       phone: params.phone ?? null,
       institution: params.institution ?? null,
       category: params.category,
+      participation_type: params.participationType,
+      points: params.points,
       fee_amount: params.feeAmount,
       currency: params.currency,
       qr_token: params.qrToken, // Insert the token directly
@@ -209,6 +225,10 @@ export async function createRegistration(params: {
     .single();
 
   if (error || !data) {
+    // If unique constraint hit due to concurrency, return existing record for idempotency.
+    if (error?.message?.includes("duplicate key value")) {
+      return (await getRegistrationByEmail(normalizedEmail, params.conferenceId)) as RegistrationRow;
+    }
     console.error("DB Error in createRegistration:", error);
     throw new Error(`Failed to create registration: ${error?.message ?? "unknown error"}`);
   }
@@ -287,6 +307,8 @@ export async function listRegistrations(params: {
 
   search?: string;
 
+  emailStatus?: string;
+
   limit?: number;
 
 }): Promise<RegistrationRow[]> {
@@ -310,6 +332,15 @@ export async function listRegistrations(params: {
     const term = `%${params.search}%`;
     query = query.or(`full_name.ilike.${term},email.ilike.${term}`);
 
+  }
+
+
+  if (params.emailStatus) {
+    if (params.emailStatus === "failed") {
+      query = query.in("email_status", ["failed", "bounced", "complained"]);
+    } else {
+      query = query.eq("email_status", params.emailStatus);
+    }
   }
 
 
@@ -361,3 +392,120 @@ export async function updateCheckInStatus(checkIns: { registrationId: string, sc
 }
 
 
+export interface EmailOutboxRow {
+  id: string;
+  registration_id: string;
+  type: string;
+  status: string;
+  attempts: number;
+  last_error: string | null;
+  provider_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createEmailOutboxEntry(params: {
+  registrationId: string;
+  type: string;
+  status?: string;
+}): Promise<EmailOutboxRow> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("email_outbox")
+    .insert({
+      registration_id: params.registrationId,
+      type: params.type,
+      status: params.status ?? "pending",
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.error("DB Error in createEmailOutboxEntry:", error);
+    throw new Error(`Failed to create outbox entry: ${error?.message ?? "unknown"}`);
+  }
+  return data as EmailOutboxRow;
+}
+
+export async function updateEmailOutboxStatus(
+  id: string,
+  updates: Partial<Pick<EmailOutboxRow, "status" | "last_error" | "provider_id" | "attempts">>
+): Promise<EmailOutboxRow> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("email_outbox")
+    .update({
+      ...updates,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.error("DB Error in updateEmailOutboxStatus:", error);
+    throw new Error(`Failed to update outbox entry: ${error?.message ?? "unknown"}`);
+  }
+  return data as EmailOutboxRow;
+}
+
+export async function getOutboxByProviderId(providerId: string): Promise<EmailOutboxRow | null> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("email_outbox")
+    .select("*")
+    .eq("provider_id", providerId)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+
+  if (error) {
+    console.error("DB Error in getOutboxByProviderId:", error);
+    return null;
+  }
+  return (data as EmailOutboxRow) ?? null;
+}
+
+export async function updateRegistrationEmailMeta(
+  registrationId: string,
+  options: {
+    status?: string;
+    lastError?: string | null;
+    markSent?: boolean;
+    incrementAttempts?: boolean;
+    incrementResend?: boolean;
+  }
+): Promise<RegistrationRow> {
+  const client = requireClient();
+  const current = await getRegistrationById(registrationId);
+  if (!current) {
+    throw new Error("Registration not found");
+  }
+
+  const payload: any = {};
+  if (options.status) payload.email_status = options.status;
+  if (options.lastError !== undefined) payload.email_last_error = options.lastError;
+  if (options.markSent) payload.email_sent_at = new Date().toISOString();
+
+  const attempts = options.incrementAttempts
+    ? (current.email_attempts ?? 0) + 1
+    : current.email_attempts ?? 0;
+  payload.email_attempts = attempts;
+
+  if (options.incrementResend) {
+    payload.resend_count = (current.resend_count ?? 0) + 1;
+    payload.resend_last_at = new Date().toISOString();
+  }
+
+  const { data, error } = await client
+    .from("registrations")
+    .update(payload)
+    .eq("id", registrationId)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    console.error("DB Error in updateRegistrationEmailMeta:", error);
+    throw new Error(`Failed to update registration email meta: ${error?.message ?? "unknown"}`);
+  }
+
+  return data as RegistrationRow;
+}

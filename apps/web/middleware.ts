@@ -78,6 +78,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/api/admin/((?!login|checkin|email-test).*)'
+    '/api/admin/((?!login|checkin|email-test|test-email).*)'
   ],
 };

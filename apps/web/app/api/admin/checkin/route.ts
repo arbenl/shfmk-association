@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateCheckInStatus } from "@/lib/supabase";
-import { ADMIN_SECRET } from "@/lib/env";
+import { ADMIN_SECRET_KEY } from "@/lib/env";
 
 export interface CheckInPayload {
   registrationId: string;
@@ -8,8 +8,8 @@ export interface CheckInPayload {
 }
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret");
-  if (!secret || secret !== ADMIN_SECRET) {
+  const secret = req.headers.get("x-admin-key")?.trim();
+  if (!secret || secret !== ADMIN_SECRET_KEY) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

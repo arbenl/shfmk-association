@@ -53,9 +53,9 @@ export default async function HomePage() {
       agenda_json: [],
       max_participants: 300,
       currency: "EUR",
-      member_fee: 20,
-      non_member_fee: 40,
-      student_fee: 10,
+      member_fee: 35,
+      non_member_fee: 30,
+      student_fee: 0,
     };
   }
 
@@ -250,18 +250,14 @@ export default async function HomePage() {
             Numri i vendeve është i kufizuar. Regjistrohuni tani për të siguruar pjesëmarrjen tuaj në këtë ngjarje të rëndësishme.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12 text-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-12 text-left">
             <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
-              <div className="text-sm text-blue-200 mb-1">Anëtarët</div>
-              <div className="text-3xl font-bold">{conference.member_fee} {conference.currency}</div>
+              <div className="text-sm text-blue-200 mb-1">Farmacist</div>
+              <div className="text-3xl font-bold">35 {conference.currency}</div>
             </div>
             <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
-              <div className="text-sm text-blue-200 mb-1">Jo-Anëtarët</div>
-              <div className="text-3xl font-bold">{conference.non_member_fee} {conference.currency}</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
-              <div className="text-sm text-blue-200 mb-1">Studentët</div>
-              <div className="text-3xl font-bold">{conference.student_fee} {conference.currency}</div>
+              <div className="text-sm text-blue-200 mb-1">Teknik i Farmacisë</div>
+              <div className="text-3xl font-bold">30 {conference.currency}</div>
             </div>
           </div>
 
