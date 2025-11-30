@@ -8,6 +8,7 @@ Monorepo for Shoqata Farmaceutike e Kosovës (SHFMK) registration (Next.js) and 
 - `apps/scanner` — Expo app for offline scanning, verification with public key, local check-ins, export.
 - `packages/shared` — Shared TypeScript helpers for JWT sign/verify and keypair generation.
 - `supabase/schema.sql` — Tables + seed conference row.
+- Release notes: [docs/RELEASE_NOTES_2025-11-30.md](docs/RELEASE_NOTES_2025-11-30.md)
 
 ## Setup
 
