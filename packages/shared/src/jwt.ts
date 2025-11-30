@@ -9,7 +9,7 @@ import {
   type KeyLike
 } from "jose";
 
-export type RegistrationCategory = "member" | "non_member" | "student";
+export type RegistrationCategory = "farmacist" | "teknik";
 
 export interface RegistrationTokenPayload {
   sub: string;

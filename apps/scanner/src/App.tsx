@@ -106,7 +106,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-secret": adminSecret,
+          "x-admin-key": adminSecret,
         },
         body: JSON.stringify(checkIns.map(c => ({ registrationId: c.registrationId, scannedAt: c.scannedAt }))),
       });

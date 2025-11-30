@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRegistrationById, getConferenceById } from "@/lib/supabase";
-import { createQrBuffer } from "@/lib/qr";
-import { sendConfirmationEmail } from "@/lib/email";
+import { dispatchConfirmationEmail } from "@/lib/email/delivery";
 
 export async function POST(req: NextRequest) {
   // Auth is handled by middleware
@@ -26,24 +25,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Conference not found" }, { status: 404 });
     }
 
-    // 4. Generate QR Buffer
-    const qrBuffer = await createQrBuffer(registration.qr_token);
-
-    // 5. Send Email
-    await sendConfirmationEmail({
-      to: registration.email,
-      fullName: registration.full_name,
-      qrBuffer,
-      conferenceName: conference.name,
-      conferenceLocation: conference.location,
-      conferenceStartDate: conference.start_date,
-      conferenceEndDate: conference.end_date,
-      category: registration.category,
-      fee: registration.fee_amount,
-      currency: registration.currency
+    const result = await dispatchConfirmationEmail({
+      registration,
+      conference,
+      type: "admin_resend",
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: result.success,
+      providerId: result.providerId ?? null,
+      emailSent: result.success,
+      error: result.success ? undefined : result.error,
+    });
   } catch (error) {
     console.error("Admin Resend Error:", error);
     return NextResponse.json({ ok: false, error: "Failed to resend email" }, { status: 500 });

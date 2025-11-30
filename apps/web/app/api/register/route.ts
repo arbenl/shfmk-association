@@ -10,8 +10,7 @@ import {
 } from "@/lib/supabase";
 import { RegistrationTokenPayload, signRegistrationToken } from "@shfmk/shared";
 import { QR_PRIVATE_KEY_PEM, ensureServerEnv } from "@/lib/env";
-import { createQrBuffer, createQrDataUrl } from "@/lib/qr";
-import { sendConfirmationEmail } from "@/lib/email";
+import { dispatchConfirmationEmail } from "@/lib/email/delivery";
 
 // Schema for validating the request body
 const inputSchema = z.object({
@@ -19,13 +18,13 @@ const inputSchema = z.object({
   email: z.string().email("Invalid email"),
   phone: z.string().optional(),
   institution: z.string().optional(),
-  category: z.enum(["member", "non_member", "student"])
+  category: z.enum(["farmacist", "teknik"]),
 });
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Validate environment and request body
-    ensureServerEnv();
+    // 1. Validate environment and request body (allow registration even if email env missing)
+    ensureServerEnv({ requireEmailEnv: false });
     const body = await req.json();
     const input = inputSchema.parse(body);
 
@@ -35,111 +34,93 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Konferenca nuk u gjet", code: "CONF_NOT_FOUND" }, { status: 404 });
     }
 
-    // 3. Check for duplicates and registration status
     const existingRegistration = await getRegistrationByEmail(input.email, conference.id);
-    if (existingRegistration) {
-      try {
-        // If the user is already registered, resend the confirmation email as a courtesy.
-        const qrBuffer = await createQrBuffer(existingRegistration.qr_token);
-        await sendConfirmationEmail({
-          to: existingRegistration.email,
-          fullName: existingRegistration.full_name,
-          qrBuffer,
-          conferenceName: conference.name,
-          conferenceLocation: conference.location,
-          conferenceStartDate: conference.start_date,
-          conferenceEndDate: conference.end_date,
-          category: existingRegistration.category,
-          fee: existingRegistration.fee_amount,
-          currency: existingRegistration.currency
-        });
-        // On success, let the user know the email was resent.
-        return NextResponse.json({ ok: true, message: "Ky email tashmë është i regjistruar. Sapo jua ridërguam email-in e konfirmimit.", code: "ALREADY_REGISTERED_RESENT" }, { status: 200 });
-      } catch (emailError) {
-        console.error("Failed to resend confirmation email on duplicate registration:", emailError);
-        return NextResponse.json({
-          ok: false,
-          error: "Ju jeni regjistruar tashmë, por dërgimi i email-it dështoi. Ju lutemi provoni përsëri më vonë.",
-          code: "EMAIL_RESEND_FAILED"
-        }, { status: 429 }); // Rate limited / Temporary failure
+
+    let registration = existingRegistration;
+    let token = registration?.qr_token;
+    let createdNew = false;
+
+    if (!registration) {
+      ensureRegistrationIsOpen(conference);
+      const registeredCount = await countRegistrations(conference.id);
+      ensureCapacity(registeredCount, conference);
+
+      const registrationId = randomUUID();
+      const fee = calculateFee(conference, input.category);
+      const participationType = "pasiv";
+      const points = 12;
+
+      const payload: RegistrationTokenPayload = {
+        sub: registrationId,
+        name: input.fullName,
+        cat: input.category,
+        conf: conference.slug,
+        fee,
+        cur: conference.currency
+      };
+
+      const { token: generatedToken, generated, publicKeyPem } = await signRegistrationToken(
+        payload,
+        QR_PRIVATE_KEY_PEM
+      );
+
+      if (!generatedToken) {
+        throw new Error("QR token generation failed. This might be due to a missing or invalid QR_PRIVATE_KEY_PEM.");
       }
+
+      if (generated && publicKeyPem) {
+        console.warn("DEMO MODE: QR_PRIVATE_KEY_PEM missing. Generated temporary key pair.");
+      }
+
+      token = generatedToken;
+
+      registration = await createRegistration({
+        id: registrationId,
+        conferenceId: conference.id,
+        fullName: input.fullName,
+        email: input.email,
+        phone: input.phone,
+        institution: input.institution,
+        category: input.category,
+        participationType,
+        points,
+        feeAmount: fee,
+        currency: conference.currency,
+        qrToken: generatedToken,
+      });
+      createdNew = true;
     }
 
-    ensureRegistrationIsOpen(conference);
-    const registeredCount = await countRegistrations(conference.id);
-    ensureCapacity(registeredCount, conference);
-
-    // 4. Pre-generate ID and QR token (THE FIX)
-    const registrationId = randomUUID();
-    const fee = calculateFee(conference, input.category);
-
-    const payload: RegistrationTokenPayload = {
-      sub: registrationId,
-      name: input.fullName,
-      cat: input.category,
-      conf: conference.slug,
-      fee,
-      cur: conference.currency
-    };
-
-    // The signRegistrationToken function now becomes a critical part of the flow
-    const { token, generated, publicKeyPem } = await signRegistrationToken(
-      payload,
-      QR_PRIVATE_KEY_PEM
-    );
-
-    // Guardrail: Ensure token was actually created
-    if (!token) {
-      throw new Error("QR token generation failed. This might be due to a missing or invalid QR_PRIVATE_KEY_PEM.");
+    if (!registration) {
+      return NextResponse.json({ ok: false, error: "Regjistrimi dështoi", code: "REG_FAIL" }, { status: 500 });
     }
 
-    if (generated && publicKeyPem) {
-      console.warn("DEMO MODE: QR_PRIVATE_KEY_PEM missing. Generated temporary key pair.");
+    if (!createdNew) {
+      // Duplicate registration: do not send email, just return existing info.
+      return NextResponse.json({
+        ok: true,
+        status: "ALREADY_REGISTERED",
+        registrationId: registration.id,
+        message: "Jeni regjistruar tashmë. Përdorni butonin për të ridërguar email-in e konfirmimit.",
+        code: "ALREADY_REGISTERED",
+      });
     }
 
-    // 5. Create registration in a single DB call
-    const registration = await createRegistration({
-      id: registrationId,
-      conferenceId: conference.id,
-      fullName: input.fullName,
-      email: input.email,
-      phone: input.phone,
-      institution: input.institution,
-      category: input.category,
-      feeAmount: fee,
-      currency: conference.currency,
-      qrToken: token, // Pass the generated token directly
+    const sendResult = await dispatchConfirmationEmail({
+      registration,
+      conference,
+      type: "initial",
     });
 
-    // 6. Send confirmation email (best effort)
-    const qrBuffer = await createQrBuffer(token);
-    let emailSent = false;
-    try {
-      await sendConfirmationEmail({
-        to: registration.email,
-        fullName: registration.full_name,
-        qrBuffer,
-        conferenceName: conference.name,
-        conferenceLocation: conference.location,
-        conferenceStartDate: conference.start_date,
-        conferenceEndDate: conference.end_date,
-        category: registration.category,
-        fee,
-        currency: conference.currency
-      });
-      emailSent = true;
-    } catch (error) {
-      // Log the error, but don't block the user. The UI will show a retry option.
-      console.error("Email sending failed on initial registration:", error);
-      emailSent = false;
-    }
-
-    // 7. Return success
     return NextResponse.json({
       ok: true,
+      status: "CREATED",
       registrationId: registration.id,
-      token,
-      emailSent // Pass boolean instead of error string
+      emailSent: sendResult.success,
+      message: sendResult.success
+        ? undefined
+        : "Regjistrimi u ruajt, por dërgimi i email-it dështoi. Përdorni Ridërgo email nga faqja e suksesit.",
+      code: "CREATED",
     });
 
   } catch (error) {

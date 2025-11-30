@@ -9,13 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormEvent, useEffect } from "react";
+import { ResendButton } from "./success/ResendButton";
 
 const schema = z.object({
   fullName: z.string().min(1, "Emri i plotë është i detyrueshëm"),
   email: z.string().email("Email-i nuk është i vlefshëm"),
   phone: z.string().optional(),
   institution: z.string().optional(),
-  category: z.enum(["member", "non_member", "student"]),
+  category: z.enum(["farmacist", "teknik"]),
 });
 
 type State = {
@@ -26,19 +27,20 @@ type State = {
   message?: string;
   success?: boolean;
   registrationId?: string; // The only piece of state we need for the redirect
+  status?: string;
 };
 
 export default function RegisterPage() {
   const router = useRouter();
 
   const handleSubmit = async (prevState: State, formData: FormData): Promise<State> => {
-    const validatedFields = schema.safeParse({
-      fullName: formData.get("fullName"),
-      email: formData.get("email"),
-      phone: formData.get("phone"),
-      institution: formData.get("institution"),
-      category: formData.get("category"),
-    });
+      const validatedFields = schema.safeParse({
+        fullName: formData.get("fullName"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        institution: formData.get("institution"),
+        category: formData.get("category"),
+      });
 
     if (!validatedFields.success) {
       return {
@@ -62,17 +64,22 @@ export default function RegisterPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        // The API now returns structured errors, which we can display.
-        // The 'ALREADY_REGISTERED_RESENT' is a success case for the user.
-        if (data.code === 'ALREADY_REGISTERED_RESENT') {
-          return { message: data.message, success: true };
-        }
         throw new Error(data.error ?? "Regjistrimi dështoi");
       }
 
-      // On success, we only need the registration ID for the redirect.
+      if (data.status === "ALREADY_REGISTERED") {
+        return {
+          success: true,
+          status: data.status,
+          message: data.message ?? "Jeni regjistruar tashmë.",
+          registrationId: data.registrationId,
+        };
+      }
+
       return {
         registrationId: data.registrationId,
+        status: data.status,
+        success: true,
       };
     } catch (err) {
       return { message: (err as Error).message ?? "Një gabim i papritur ndodhi gjatë dërgimit të kërkesës." };
@@ -82,11 +89,11 @@ export default function RegisterPage() {
   const [state, formAction] = useFormState(handleSubmit, {});
 
   useEffect(() => {
-    // New robust redirect logic
-    if (state.registrationId) {
+    // Redirect only for new registrations; duplicates stay on the page with resend option.
+    if (state.registrationId && state.status !== "ALREADY_REGISTERED") {
       router.push(`/conference/register/success?rid=${state.registrationId}`);
     }
-  }, [state.registrationId, router]);
+  }, [state.registrationId, state.status, router]);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -118,20 +125,34 @@ export default function RegisterPage() {
             </div>
             <div>
               <Label htmlFor="category">Kategoria</Label>
-              <Select name="category" defaultValue="non_member">
+              <Select name="category" defaultValue="farmacist">
                 <SelectTrigger>
                   <SelectValue placeholder="Zgjidh kategorinë" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Anëtar</SelectItem>
-                  <SelectItem value="non_member">Jo-anëtar</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="farmacist">Farmacist</SelectItem>
+                  <SelectItem value="teknik">Teknik i Farmacisë</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
+              <p className="font-semibold">Pikët OMK</p>
+              <p>Pjesëmarrës pasiv (ndjekës): 12 pikë.</p>
+              <p>Pjesëmarrës aktiv (vetëm ligjërues/prezentues): 15 pikë.</p>
+              <p className="text-xs mt-1 text-blue-800"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit, jo për pjesëmarrësit e zakonshëm.</p>
             </div>
             {state.success && <p className="text-sm text-green-600 font-medium">{state.message}</p>}
             {state.errors && !state.success && <p className="text-sm text-red-500">Ju lutemi korrigjoni gabimet.</p>}
             {!state.success && state.message && <p className="text-sm text-red-500">{state.message}</p>}
+            {state.status === "ALREADY_REGISTERED" && state.registrationId && (
+              <div className="space-y-2">
+                <p className="text-sm text-blue-700 font-medium">Jeni regjistruar tashmë. Mund ta ridërgoni email-in e konfirmimit.</p>
+                <ResendButton registrationId={state.registrationId} />
+                <Button variant="outline" onClick={() => router.push(`/conference/register/success?rid=${state.registrationId}`)}>
+                  Hap faqen e konfirmimit
+                </Button>
+              </div>
+            )}
             <Button type="submit" className="w-full">
               Regjistrohu & Merr QR Kodin
             </Button>

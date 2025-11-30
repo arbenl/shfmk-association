@@ -29,8 +29,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     return <InvalidState message="Regjistrimi me këtë ID nuk u gjet." />;
   }
 
-  const qrContent = `${process.env.SITE_BASE_URL ?? "http://localhost:3000"}/verify?token=${registration.qr_token}`;
-  const qrDataUrl = await createQrDataUrl(qrContent);
+  const qrDataUrl = await createQrDataUrl(registration.qr_token);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -53,6 +52,9 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
               <p><strong>Adresa:</strong> Prishtinë</p>
               <p><strong>Përshkrimi:</strong> {registration.full_name}, pagesë për konferencë</p>
               <p><strong>Vlera për pagesë:</strong> {registration.fee_amount}.00 {registration.currency}</p>
+              <p><strong>Pjesëmarrja:</strong> {registration.participation_type === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"} ({registration.points} pikë)</p>
+              <p><strong>Kategoria:</strong> {registration.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}</p>
+              <p className="text-xs text-blue-800"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit (jo për pjesëmarrësit e zakonshëm).</p>
             </div>
           </div>
 

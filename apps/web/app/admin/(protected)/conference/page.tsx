@@ -27,7 +27,7 @@ export default async function ConferencePage() {
     const missingFields = [];
     if (!conference.start_date) missingFields.push("Data e fillimit");
     if (!conference.location) missingFields.push("Lokacioni");
-    if (!conference.member_fee) missingFields.push("Çmimi për anëtarë");
+    if (!conference.member_fee) missingFields.push("Çmimi për farmacistë");
     if (!conference.agenda_json || (Array.isArray(conference.agenda_json) && conference.agenda_json.length === 0)) {
         missingFields.push("Agjenda");
     }
@@ -46,7 +46,7 @@ export default async function ConferencePage() {
             venue_city: formData.get("venue_city") as string,
             member_fee: Number(formData.get("member_fee")),
             non_member_fee: Number(formData.get("non_member_fee")),
-            student_fee: Number(formData.get("student_fee")),
+            student_fee: 0,
             is_published: formData.get("is_published") === "on",
             registration_open: formData.get("registration_open") === "on",
             agenda_json: JSON.parse(formData.get("agenda_json") as string || "[]"),
@@ -170,17 +170,14 @@ export default async function ConferencePage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="member_fee">Anëtarët</Label>
-                                    <Input id="member_fee" name="member_fee" type="number" defaultValue={conference.member_fee} />
+                                    <Label htmlFor="member_fee">Farmacist</Label>
+                                    <Input id="member_fee" name="member_fee" type="number" defaultValue={conference.member_fee || 35} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="non_member_fee">Jo-Anëtarët</Label>
-                                    <Input id="non_member_fee" name="non_member_fee" type="number" defaultValue={conference.non_member_fee} />
+                                    <Label htmlFor="non_member_fee">Teknik i Farmacisë</Label>
+                                    <Input id="non_member_fee" name="non_member_fee" type="number" defaultValue={conference.non_member_fee || 30} />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="student_fee">Studentët</Label>
-                                    <Input id="student_fee" name="student_fee" type="number" defaultValue={conference.student_fee} />
-                                </div>
+                                <Input type="hidden" name="student_fee" value="0" />
                             </CardContent>
                         </Card>
                     </div>

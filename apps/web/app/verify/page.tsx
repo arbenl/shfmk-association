@@ -150,8 +150,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-muted-foreground">Kategoria:</span>
                                 <Badge variant="outline">
-                                    {payload.cat === 'member' ? 'Anëtar' :
-                                        payload.cat === 'student' ? 'Student' : 'Jo-Anëtar'}
+                                    {payload.cat === 'farmacist' ? 'Farmacist' : 'Teknik i Farmacisë'}
                                 </Badge>
                             </div>
                             <div className="flex justify-between items-center">

@@ -8,24 +8,37 @@ export const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY ?? "";
 export const ADMIN_AUTH_DEBUG = process.env.ADMIN_AUTH_DEBUG === "true";
 export const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "";
+export const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET ?? "";
 // Important: Handle escaped newlines from .env files for the PEM key
 export const QR_PRIVATE_KEY_PEM = process.env.QR_PRIVATE_KEY_PEM?.replace(/\\n/g, '\n');
-export const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
+function cleanEnv(value?: string | null): string {
+  if (!value) return "";
+  return value.trim().replace(/^['"]|['"]$/g, "");
+}
+
+export const ADMIN_SECRET_KEY = cleanEnv(process.env.ADMIN_SECRET_KEY ?? process.env.ADMIN_SECRET ?? "");
+export const ADMIN_SECRET = ADMIN_SECRET_KEY;
 export const SITE_BASE_URL =
-  process.env.SITE_BASE_URL ?? "http://localhost:3000";
+  process.env.NEXT_PUBLIC_BASE_URL ??
+  process.env.SITE_BASE_URL ??
+  "http://localhost:3000";
 export const NODE_ENV = process.env.NODE_ENV;
 
 /**
  * Checks that all required server-side environment variables are present.
  * Throws an error if any are missing.
  */
-export function ensureServerEnv() {
+export function ensureServerEnv(options?: { requireEmailEnv?: boolean }) {
+  const requireEmailEnv = options?.requireEmailEnv ?? true;
   const missing: string[] = [];
   if (!SUPABASE_URL) missing.push("SUPABASE_URL");
   if (!SUPABASE_ANON_KEY) missing.push("SUPABASE_ANON_KEY");
   if (!SUPABASE_SERVICE_KEY) missing.push("SUPABASE_SERVICE_KEY");
-  if (!RESEND_API_KEY) missing.push("RESEND_API_KEY");
-  if (!RESEND_FROM_EMAIL) missing.push("RESEND_FROM_EMAIL");
+  if (requireEmailEnv) {
+    if (!RESEND_API_KEY) missing.push("RESEND_API_KEY");
+    if (!RESEND_FROM_EMAIL) missing.push("RESEND_FROM_EMAIL");
+  }
+  if (!ADMIN_SECRET_KEY) missing.push("ADMIN_SECRET_KEY");
 
   // In production, we strictly require the private key for security.
   // In dev, we can fallback to generated keys (handled in API).

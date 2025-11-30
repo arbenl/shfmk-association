@@ -1,17 +1,9 @@
 import { Conference } from "./supabase";
 import { RegistrationCategory } from "@shfmk/shared";
 
-export function calculateFee(conference: Conference, category: RegistrationCategory): number {
-  switch (category) {
-    case "member":
-      return Number(conference.member_fee);
-    case "non_member":
-      return Number(conference.non_member_fee);
-    case "student":
-      return Number(conference.student_fee);
-    default:
-      return Number(conference.non_member_fee);
-  }
+export function calculateFee(_conference: Conference, category: RegistrationCategory): number {
+  if (category === "farmacist") return 35;
+  return 30; // teknik default
 }
 
 export function ensureRegistrationIsOpen(conference: Conference) {

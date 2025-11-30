@@ -31,8 +31,10 @@ This script will also print the exact environment variable lines to copy into yo
     SUPABASE_SERVICE_KEY="your-supabase-service-role-key"
     RESEND_API_KEY="your-resend-api-key"
     RESEND_FROM_EMAIL="noreply@your-domain.com"
+    RESEND_WEBHOOK_SECRET="your-resend-webhook-secret"
     QR_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----\n..."
-    ADMIN_SECRET="a-secure-secret-for-admin-access"
+    ADMIN_SECRET_KEY="a-secure-secret-for-admin-access"
+    NEXT_PUBLIC_BASE_URL="http://localhost:3000"
     ```
 
 * **Scanner App (`apps/scanner/.env`)**:
@@ -75,6 +77,19 @@ To ensure all apps build correctly.
 ```bash
 pnpm -r build
 ```
+
+**1.7. Test email delivery**
+
+Use the admin test endpoint (requires `ADMIN_SECRET_KEY`) to confirm Resend works with your domain:
+
+```bash
+curl -X POST http://localhost:3000/api/admin/test-email \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: $ADMIN_SECRET_KEY" \
+  -d '{"to":"you@example.com"}'
+```
+
+Resend webhook testing: send a sample payload to `http://localhost:3000/api/webhooks/resend` with the `x-resend-signature` header (HMAC SHA-256 using `RESEND_WEBHOOK_SECRET`) to simulate delivered/bounce events.
 
 ---
 
@@ -165,15 +180,22 @@ http://localhost:3000/conference/register/success?rid=550e8400-e29b-41d4-a716-44
 
 When deploying the `apps/web` application to Vercel, configure the following environment variables in the Vercel project settings.
 
-| Variable                   | Description                                  | Server-Only |
-| -------------------------- | -------------------------------------------- | ----------- |
-| `SUPABASE_URL`             | Supabase project URL.                        | Yes         |
-| `SUPABASE_SERVICE_KEY`     | Supabase Service Role key (secret).          | Yes         |
-| `RESEND_API_KEY`           | API key for Resend email service.            | Yes         |
-| `RESEND_FROM_EMAIL`        | Verified email address to send from.         | Yes         |
-| `QR_PRIVATE_KEY_PEM`       | **Multi-line** private key for signing QRs.  | Yes         |
-| `CONFERENCE_SLUG`          | (Optional) Supabase slug for the conference. | Yes         |
-| `SITE_BASE_URL`            | (Optional) The public URL of the deployment. | Yes         |
+| Variable                   | Description                                                    | Server-Only |
+| -------------------------- | -------------------------------------------------------------- | ----------- |
+| `SUPABASE_URL`             | Supabase project URL.                                          | Yes         |
+| `SUPABASE_SERVICE_KEY`     | Supabase Service Role key (secret).                            | Yes         |
+| `RESEND_API_KEY`           | API key for Resend email service.                              | Yes         |
+| `RESEND_FROM_EMAIL`        | Verified sender, e.g. `Konferenca SHFK <konferenca@shfk.org>`. | Yes         |
+| `RESEND_WEBHOOK_SECRET`    | Resend webhook signing secret (for /api/webhooks/resend).      | Yes         |
+| `QR_PRIVATE_KEY_PEM`       | **Multi-line** private key for signing QRs.                    | Yes         |
+| `ADMIN_SECRET_KEY`         | Admin API key used for protected endpoints.                    | Yes         |
+| `CONFERENCE_SLUG`          | (Optional) Supabase slug for the conference.                   | Yes         |
+| `NEXT_PUBLIC_BASE_URL`     | Public site URL (used in QR/email links).                      | No          |
+
+### 3.1. Resend Webhook
+- Endpoint: `https://shfk.org/api/webhooks/resend`
+- Events: delivered, bounced, complained (Resend dashboard → Webhooks)
+- Signing secret: set as `RESEND_WEBHOOK_SECRET` in Vercel; requests without/with bad signature are rejected.
 
 ---
 
@@ -225,14 +247,15 @@ For iOS, you will need an Apple Developer account.
 1. [ ] **Finalize Env Vars**: Double-check all production environment variables are set correctly in Vercel and EAS.
 2. [ ] **Distribute Scanner**: Ensure all volunteers have the latest version of the scanner app installed and tested on their device.
 3. [ ] **Train Volunteers**: Show volunteers how to scan, what the status colors mean (Green, Yellow, Red), and how to use the "Sync" feature.
-4. [ ] **Set Admin Secret**: Provide the `ADMIN_SECRET` to the lead operator for accessing the admin dashboard and for the sync feature on the scanners.
+4. [ ] **Set Admin Secret**: Provide the `ADMIN_SECRET_KEY` to the lead operator for accessing the admin dashboard and for the sync feature on the scanners.
 
 **During the Event:**
 5.  [ ] **Monitor Admin Dashboard**: Have the admin dashboard (`/admin/registrations`) open on a laptop to monitor incoming registrations.
-6.  [ ] **Check Network**: Scanners work offline. If Wi-Fi is available, great. If not, don't worry.
+6.  [ ] **Email Delivery**: Use the status chips on `/admin/registrations` to spot pending/failed emails and trigger **Bulk Ridërgo** for failed/pending rows.
+7.  [ ] **Check Network**: Scanners work offline. If Wi-Fi is available, great. If not, don't worry.
 
 **After the Event:**
-7.  [ ] **Sync All Scanners**: Before volunteers leave, ensure each one connects to the internet and uses the "Sync" button to upload all their locally stored check-ins.
-8.  [ ] **Verify Sync**: Check the admin dashboard or Supabase table to confirm the `checked_in_at` field is populated for the scanned attendees.
-9.  [ ] **Export Final Data**: Use the "Export CSV" button on the admin page to get the final list of all registered and checked-in attendees.
-10. [ ] **Revoke Secrets**: (Optional but good practice) Rotate the `ADMIN_SECRET` after the event is complete.
+8.  [ ] **Sync All Scanners**: Before volunteers leave, ensure each one connects to the internet and uses the "Sync" button to upload all their locally stored check-ins.
+9.  [ ] **Verify Sync**: Check the admin dashboard or Supabase table to confirm the `checked_in_at` field is populated for the scanned attendees.
+10. [ ] **Export Final Data**: Use the "Export CSV" button on the admin page to get the final list of all registered and checked-in attendees.
+11. [ ] **Revoke Secrets**: (Optional but good practice) Rotate the `ADMIN_SECRET_KEY` after the event is complete.
