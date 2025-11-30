@@ -30,13 +30,6 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    // Use built-in Helvetica without bundling AFM files
-    try {
-      doc.font("Helvetica");
-    } catch {
-      // ignore, pdfkit will fallback
-    }
-
     doc.fontSize(20).text("Konferenca SHFK", { align: "center" });
     doc.moveDown(0.5);
     doc.fontSize(14).text(input.conferenceName, { align: "center" });
@@ -156,7 +149,13 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
     </div>
   `;
 
-  const pdfBuffer = await buildTicketPdf(input);
+  let pdfBuffer: Buffer | null = null;
+  try {
+    pdfBuffer = await buildTicketPdf(input);
+  } catch (err) {
+    console.warn("[email] PDF generation failed; sending without PDF", (err as Error).message);
+    pdfBuffer = null;
+  }
 
   return sendEmail({
     to: input.to,
@@ -173,11 +172,15 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
       disposition: "inline",
       contentType: "image/png",
     } as any,
-      {
-        filename: "Bileta-Konference.pdf",
-        content: pdfBuffer,
-        contentType: "application/pdf",
-      } as any,
+      ...(pdfBuffer
+        ? [
+            {
+              filename: "Bileta-Konference.pdf",
+              content: pdfBuffer,
+              contentType: "application/pdf",
+            } as any,
+          ]
+        : []),
     ],
   });
 }
