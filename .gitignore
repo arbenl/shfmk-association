@@ -2,6 +2,7 @@
 node_modules/
 **/node_modules/
 .expo/
+**/.expo/
 
 # pnpm store directories
 .pnpm/
@@ -21,13 +22,21 @@ pnpm-debug.log*
 
 # Next.js build output
 .next/
+**/.next/
+
+# Other build artifacts
+dist/
+**/dist/
+.turbo/
+.vercel/
+coverage/
+tmp/
+.cache/
+apps/**/.expo/native-modules-cache/
+*.tsbuildinfo
 
 # Supabase temporary files
 supabase/.temp/
-
-# Generated artifacts
-dist/
-build/
 
 # Secrets and local environment
 .env
