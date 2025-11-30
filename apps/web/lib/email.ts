@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
 import { sendEmail } from "./email/resend";
 
 export interface ConfirmationEmailInput {
@@ -29,6 +31,16 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
+
+    try {
+      const helveticaPath = require.resolve("pdfkit/js/data/Helvetica.afm");
+      const helvetica = fs.readFileSync(helveticaPath);
+      doc.registerFont("Helvetica", helvetica);
+      doc.font("Helvetica");
+    } catch (err) {
+      // Fall back silently; pdfkit will use default font if registration fails
+      console.warn("[pdf] Helvetica font registration failed, using default", (err as Error).message);
+    }
 
     doc.fontSize(20).text("Konferenca SHFK", { align: "center" });
     doc.moveDown(0.5);
