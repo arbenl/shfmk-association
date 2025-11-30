@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSecret } from "@/lib/adminAuth";
 import { CONFERENCE_SLUG } from "@/lib/env";
 import { getConferenceBySlug, listRegistrations } from "@/lib/supabase";
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,8 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     return <InvalidState message="Regjistrimi me këtë ID nuk u gjet." />;
   }
 
-  const qrDataUrl = await createQrDataUrl(registration.qr_token);
+  const qrContent = `${process.env.SITE_BASE_URL ?? "http://localhost:3000"}/verify?token=${registration.qr_token}`;
+  const qrDataUrl = await createQrDataUrl(qrContent);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -39,7 +41,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
         <CardContent className="grid gap-4">
           <p>Faleminderit për regjistrimin tuaj, {registration.full_name}. Ruajeni këtë kod QR pasi që është bileta juaj për konferencë.</p>
           <div className="flex justify-center bg-white p-4 rounded-lg">
-            {qrDataUrl ? <img src={qrDataUrl} alt="QR Code" width={240} height={240} /> : <div className="w-[240px] h-[240px] bg-gray-200 animate-pulse rounded-md" />}
+            {qrDataUrl ? <Image src={qrDataUrl} alt="QR Code" width={240} height={240} /> : <div className="w-[240px] h-[240px] bg-gray-200 animate-pulse rounded-md" />}
           </div>
 
           <div className="text-left bg-gray-50 p-4 rounded-lg space-y-2">

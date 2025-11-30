@@ -1,21 +1,27 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import "./globals.css";
 import { ReactNode } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { cn } from "@/lib/utils";
+import { getSiteSettings } from "@/lib/supabase";
 
 export const metadata = {
   title: "SHFMK Konferenca",
   description: "Shoqata Farmaceutike e Kosovës - Regjistrimi në konferencë"
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const settings = await getSiteSettings();
+
   return (
     <html lang="sq">
-      <body className={cn("min-h-screen bg-background font-sans antialiased")}>
-        <Header />
+      <body className={cn("min-h-screen bg-background font-sans antialiased flex flex-col")}>
+        <Header settings={settings} />
         <main className="flex-1">{children}</main>
-        <Footer />
+        <Footer settings={settings} />
       </body>
     </html>
   );

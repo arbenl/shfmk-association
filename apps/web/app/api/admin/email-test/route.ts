@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSecret } from "@/lib/adminAuth";
 import { Resend } from 'resend';
-import { RESEND_API_KEY, RESEND_FROM_EMAIL, NODE_ENV } from "@/lib/env";
+import { RESEND_API_KEY, RESEND_FROM_EMAIL, NODE_ENV, ADMIN_SECRET } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
   // 1. Guard against public access
   const secret = req.headers.get("x-admin-secret");
-  try {
-    verifyAdminSecret(secret);
-  } catch (error) {
+  if (!secret || secret !== ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,12 +23,12 @@ export async function GET(req: NextRequest) {
 
   // 2. Check for required env vars
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
-    return NextResponse.json({ 
-        error: "Server is missing RESEND_API_KEY or RESEND_FROM_EMAIL environment variables.",
-        details: {
-            hasApiKey: !!RESEND_API_KEY,
-            hasFromEmail: !!RESEND_FROM_EMAIL
-        }
+    return NextResponse.json({
+      error: "Server is missing RESEND_API_KEY or RESEND_FROM_EMAIL environment variables.",
+      details: {
+        hasApiKey: !!RESEND_API_KEY,
+        hasFromEmail: !!RESEND_FROM_EMAIL
+      }
     }, { status: 500 });
   }
 

@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/adminAuth";
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-export async function POST() {
-  // Always clear the cookie, regardless of whether it exists or not.
-  const headers = { 'Set-Cookie': clearSessionCookie() };
-  return NextResponse.json({ ok: true, message: "Logged out" }, { headers });
+import { createClient } from "@/lib/supabase/server";
+
+export async function POST(req: NextRequest) {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  return NextResponse.redirect(new URL("/admin/login", req.url));
 }

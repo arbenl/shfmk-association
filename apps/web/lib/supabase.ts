@@ -6,8 +6,11 @@ import { RegistrationCategory } from "@shfmk/shared";
 const supabaseClient =
   SUPABASE_URL && SUPABASE_SERVICE_KEY
     ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false }
-      })
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" })
+      }
+    })
     : null;
 
 function requireClient() {
@@ -19,21 +22,122 @@ function requireClient() {
 }
 
 // --- Interfaces ---
+export interface SiteSettings {
+  id: string;
+  org_name: string;
+  email: string;
+  phone: string | null;
+  phone2: string | null;
+  address: string | null;
+  city: string | null;
+  website: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+  updated_at: string | null;
+  updated_by_email: string | null;
+}
+
 export interface Conference {
   id: string;
   name: string;
   slug: string;
+  subtitle: string | null;
   start_date: string | null;
   end_date: string | null;
   location: string | null;
-  registration_open: string | null;
-  registration_close: string | null;
+  venue_address: string | null;
+  venue_city: string | null;
+  registration_open: boolean | null;
+  registration_deadline: string | null;
+  is_published: boolean | null;
+  agenda_json: any | null;
   max_participants: number | null;
   currency: string;
   member_fee: number;
   non_member_fee: number;
   student_fee: number;
 }
+
+// ... existing RegistrationRow interface ...
+
+// --- Database Functions ---
+
+export async function getSiteSettings(): Promise<SiteSettings | null> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("site_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("DB Error in getSiteSettings:", error);
+    // Don't throw, just return null so UI can use defaults
+    return null;
+  }
+
+  return data as SiteSettings | null;
+}
+
+export async function updateSiteSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
+  const client = requireClient();
+
+  // First check if a row exists
+  const existing = await getSiteSettings();
+
+  let result;
+
+  if (existing) {
+    const { data, error } = await client
+      .from("site_settings")
+      .update({
+        ...settings,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update settings: ${error.message}`);
+    result = data;
+  } else {
+    const { data, error } = await client
+      .from("site_settings")
+      .insert({
+        ...settings,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to create settings: ${error.message}`);
+    result = data;
+  }
+
+  return result as SiteSettings;
+}
+
+export async function updateConference(id: string, updates: Partial<Conference>): Promise<Conference> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("conferences")
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update conference: ${error.message}`);
+  }
+
+  return data as Conference;
+}
+
+// ... existing functions ...
 
 export interface RegistrationRow {
   id: string;
@@ -44,7 +148,9 @@ export interface RegistrationRow {
   qr_token: string;
   fee_amount: number;
   currency: string;
-  // other fields...
+  checked_in: boolean;
+  checked_in_at: string | null;
+  created_at: string;
 }
 
 // --- Database Functions ---
@@ -145,116 +251,113 @@ export async function countRegistrations(conferenceId: string): Promise<number> 
     throw new Error(`Failed to count registrations: ${error.message}`);
   }
 
-    return count ?? 0;
+  return count ?? 0;
+
+}
+
+
+
+export async function getRegistrationById(id: string): Promise<RegistrationRow | null> {
+
+  const client = requireClient();
+
+  const { data, error } = await client.from("registrations").select("*").eq("id", id).single();
+
+
+
+  if (error && error.code !== "PGRST116") { // PGRST116 = 0 rows
+
+    console.error("DB Error in getRegistrationById:", error);
+
+    throw new Error(`Failed to load registration by ID: ${error.message}`);
 
   }
 
-  
 
-  export async function getRegistrationById(id: string): Promise<RegistrationRow | null> {
 
-    const client = requireClient();
+  return data as RegistrationRow | null;
 
-    const { data, error } = await client.from("registrations").select("*").eq("id", id).single();
+}
 
-  
 
-    if (error && error.code !== "PGRST116") { // PGRST116 = 0 rows
 
-      console.error("DB Error in getRegistrationById:", error);
+export async function listRegistrations(params: {
 
-      throw new Error(`Failed to load registration by ID: ${error.message}`);
+  conferenceId: string;
 
-    }
+  search?: string;
 
-  
+  limit?: number;
 
-    return data as RegistrationRow | null;
+}): Promise<RegistrationRow[]> {
+
+  const client = requireClient();
+
+  let query = client
+
+    .from("registrations")
+
+    .select("*")
+
+    .eq("conference_id", params.conferenceId)
+
+    .order("created_at", { ascending: false });
+
+
+
+  if (params.search) {
+
+    const term = `%${params.search}%`;
+    query = query.or(`full_name.ilike.${term},email.ilike.${term}`);
 
   }
 
-  
 
-  export async function listRegistrations(params: {
 
-    conferenceId: string;
+  if (params.limit) {
 
-    search?: string;
+    query = query.limit(params.limit);
 
-    limit?: number;
+  }
 
-  }): Promise<RegistrationRow[]> {
 
-    const client = requireClient();
 
-    let query = client
+  const { data, error } = await query;
 
-      .from("registrations")
+  if (error) {
 
-      .select("*")
+    throw new Error(`Failed to list registrations: ${error.message}`);
 
-      .eq("conference_id", params.conferenceId)
+  }
 
-      .order("created_at", { ascending: false });
+  return (data as RegistrationRow[]) ?? [];
 
-  
+}
 
-    if (params.search) {
 
-      const term = `%${params.search.replace(/ /g, "%")}%`;
 
-      query = query.or(`full_name.ilike.${term},email.ilike.${term}`);
+export async function updateCheckInStatus(checkIns: { registrationId: string, scannedAt: string }[]): Promise<number> {
 
-    }
+  const client = requireClient();
 
-  
+  const { data, error } = await client.rpc('bulk_update_checkins', {
 
-    if (params.limit) {
+    payload: checkIns
 
-      query = query.limit(params.limit);
+  });
 
-    }
 
-  
 
-    const { data, error } = await query;
+  if (error) {
 
-    if (error) {
+    console.error("RPC Error in updateCheckInStatus:", error);
 
-      throw new Error(`Failed to list registrations: ${error.message}`);
+    throw new Error(`Failed to bulk update check-ins: ${error.message}`);
 
-    }
+  }
 
-        return (data as RegistrationRow[]) ?? [];
+  return data ?? 0;
 
-    }
+}
 
-    
 
-    export async function updateCheckInStatus(checkIns: { registrationId: string, scannedAt: string }[]): Promise<number> {
-
-        const client = requireClient();
-
-        const { data, error } = await client.rpc('bulk_update_checkins', {
-
-            payload: checkIns
-
-        });
-
-    
-
-        if (error) {
-
-            console.error("RPC Error in updateCheckInStatus:", error);
-
-            throw new Error(`Failed to bulk update check-ins: ${error.message}`);
-
-        }
-
-        return data ?? 0;
-
-    }
-
-    
-
-  

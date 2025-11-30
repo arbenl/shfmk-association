@@ -82,7 +82,7 @@ pnpm -r build
 
 ### 2.1. Admin Login
 
-The admin panel is protected by a secret-based authentication system with secure session cookies.
+The admin panel is protected by Supabase Authentication. Only users whose emails are in the `admin_users` table can access the dashboard.
 
 **Access URL:**
 
@@ -94,31 +94,28 @@ https://your-domain.com/admin/login  (production)
 **Login Process:**
 
 1. Navigate to `/admin/login`
-2. Enter the `ADMIN_SECRET` value (from environment variables)
-3. On success, a session cookie (`admin_session`) is set with:
-   * **HttpOnly** flag (prevents JavaScript access)
-   * **SameSite=Strict** (CSRF protection)
-   * **24-hour expiration**
-4. Redirected to `/admin/registrations` or original destination
+2. Enter your email and password (standard Supabase Auth)
+3. The system checks if your email exists in the `admin_users` allowlist table.
+4. On success, you are redirected to the dashboard.
 
 **Protected Routes:**
 
-* `/admin/registrations` - View all registrations
-* `/api/admin/resend` - Resend confirmation emails
-* `/api/admin/email-test` - Test email configuration
+* `/admin/*` - All admin pages
+* `/api/admin/*` - All admin API routes
 
-### 2.2. Admin Logout
+### 2.2. Managing Admins
 
-**Option 1: API Call**
+To add a new admin, you must insert their email into the `admin_users` table in Supabase.
 
-```bash
-curl -X POST http://localhost:3000/api/admin/logout
+**SQL Command:**
+
+```sql
+insert into admin_users (email) values ('new.admin@example.com');
 ```
 
-**Option 2: Clear Browser Cookies**
+### 2.3. Admin Logout
 
-* Cookie name: `admin_session`
-* Clearing this cookie will log you out
+Click the "Dil" (Logout) button in the admin header.
 
 ### 2.3. Registration Success Page
 
@@ -175,7 +172,6 @@ When deploying the `apps/web` application to Vercel, configure the following env
 | `RESEND_API_KEY`           | API key for Resend email service.            | Yes         |
 | `RESEND_FROM_EMAIL`        | Verified email address to send from.         | Yes         |
 | `QR_PRIVATE_KEY_PEM`       | **Multi-line** private key for signing QRs.  | Yes         |
-| `ADMIN_SECRET`             | Secret to access admin pages.                | Yes         |
 | `CONFERENCE_SLUG`          | (Optional) Supabase slug for the conference. | Yes         |
 | `SITE_BASE_URL`            | (Optional) The public URL of the deployment. | Yes         |
 

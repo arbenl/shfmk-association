@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSecret } from "@/lib/adminAuth";
 import { updateCheckInStatus } from "@/lib/supabase";
+import { ADMIN_SECRET } from "@/lib/env";
 
 export interface CheckInPayload {
   registrationId: string;
@@ -9,9 +9,7 @@ export interface CheckInPayload {
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-admin-secret");
-  try {
-    verifyAdminSecret(secret);
-  } catch (error) {
+  if (!secret || secret !== ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,7 +18,7 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(checkIns) || checkIns.length === 0) {
       return NextResponse.json({ error: "Invalid payload. Expected an array of check-in records." }, { status: 400 });
     }
-    
+
     const updatedCount = await updateCheckInStatus(checkIns);
 
     return NextResponse.json({ success: true, updated: updatedCount });

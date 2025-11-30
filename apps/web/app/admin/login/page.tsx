@@ -3,97 +3,93 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function AdminLoginForm() {
+function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [secret, setSecret] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const redirect = searchParams.get("redirect") || "/admin/registrations";
+  const errorMsg = searchParams.get("error");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    setError("");
+    setLoading(true);
 
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
+        body: JSON.stringify({ email, password }),
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret }),
       });
-
-      // Safe JSON parsing: check content-type before parsing
-      const contentType = res.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new Error("Server returned invalid response. Please try again.");
-      }
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+      if (res.ok) {
+        router.push(redirect);
+        router.refresh();
+      } else {
+        setError(data.error || "Login failed");
       }
-
-      // On success, redirect to the intended page or the admin dashboard
-      const redirectUrl = searchParams.get("redirect") || "/admin/registrations";
-      router.push(redirectUrl);
-
     } catch (err) {
-      setError((err as Error).message);
+      setError("An unexpected error occurred");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <Card className="mx-auto max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Admin Access</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div>
-              <Label htmlFor="secret">Admin Secret</Label>
-              <Input
-                id="secret"
-                type="password"
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
-                placeholder="Enter secret"
-                required
-              />
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle className="text-center">Hyrje në Panel</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@example.com"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Fjalëkalimi</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          {errorMsg && <p className="text-sm text-red-500">{errorMsg}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Duke hyrë..." : "Hyr"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
-export default function AdminLoginPage() {
+export default function AdminLogin() {
   return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-12">
-        <Card className="mx-auto max-w-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl">Admin Access</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-muted-foreground">Loading...</p>
-          </CardContent>
-        </Card>
-      </div>
-    }>
-      <AdminLoginForm />
-    </Suspense>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Suspense fallback={<div>Loading...</div>}>
+        <LoginForm />
+      </Suspense>
+    </div>
   );
 }

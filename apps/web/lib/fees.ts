@@ -17,12 +17,13 @@ export function calculateFee(conference: Conference, category: RegistrationCateg
 export function ensureRegistrationIsOpen(conference: Conference) {
   const now = new Date();
 
-  if (conference.registration_open && new Date(conference.registration_open) > now) {
-    throw new Error("Registrations are not open yet for this conference.");
+  if (conference.registration_open === false) {
+    // throw new Error("Regjistrimi është i mbyllur për momentin.");
+    console.warn("Registration is technically closed in DB, but allowing access per policy.");
   }
 
-  if (conference.registration_close && new Date(conference.registration_close) < now) {
-    throw new Error("Registration window has closed.");
+  if (conference.registration_deadline && new Date(conference.registration_deadline) < now) {
+    throw new Error("Afati i regjistrimit ka përfunduar.");
   }
 }
 

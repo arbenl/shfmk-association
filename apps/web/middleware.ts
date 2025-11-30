@@ -1,47 +1,83 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifySessionCookie } from './lib/adminAuth'; // I will create this utility
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServiceClient } from '@/lib/supabase/server';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_AUTH_DEBUG } from '@/lib/env';
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  const { pathname } = request.nextUrl;
+
+  // Allow login page and API to pass through
+  if (pathname.startsWith('/api/admin/login') || pathname === '/admin/login') {
+    return response;
+  }
+
+  // Check auth for protected admin routes
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      if (ADMIN_AUTH_DEBUG) console.warn("[middleware] no session, redirecting", pathname);
+      const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Check allowlist
+    const service = createServiceClient();
+    const { data: allowedUser, error: allowErr } = await service
+      .from('admin_users')
+      .select('email')
+      .eq('email', user.email?.toLowerCase())
+      .maybeSingle();
+
+    if (allowErr && ADMIN_AUTH_DEBUG) console.error("[middleware] allowlist error", allowErr.message);
+
+    if (!allowedUser) {
+      // User is logged in but not an admin
+      // We can redirect to a "Unauthorized" page or just return 403
+      // For now, let's redirect to login with an error
+      if (ADMIN_AUTH_DEBUG) console.warn("[middleware] user not in allowlist", user.email);
+      const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('error', 'Unauthorized');
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return response;
+}
 
 export const config = {
-  // Protect all admin and admin API routes
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/api/admin/((?!login|checkin|email-test).*)'
+  ],
 };
-
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  // Allow the login API route to be accessed without a session
-  if (pathname.startsWith('/api/admin/login')) {
-    return NextResponse.next();
-  }
-
-  // 1. Try to get the session cookie
-  const sessionCookie = req.cookies.get('admin_session')?.value;
-  if (!sessionCookie) {
-    return handleUnauthorized(req, 'Missing session cookie');
-  }
-
-  // 2. Verify the session cookie
-  try {
-    await verifySessionCookie(sessionCookie);
-    // If verification is successful, allow the request to proceed
-    return NextResponse.next();
-  } catch (err) {
-    return handleUnauthorized(req, 'Invalid session cookie');
-  }
-}
-
-function handleUnauthorized(req: NextRequest, reason: string) {
-  const { pathname } = req.nextUrl;
-  console.warn(`Unauthorized access to ${pathname}: ${reason}`);
-
-  // For API routes, return a 401 JSON response
-  if (pathname.startsWith('/api/admin/')) {
-    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // For browser navigation, redirect to the login page
-  const loginUrl = new URL('/admin/login', req.url);
-  // Pass the original destination so we can redirect back after login
-  loginUrl.searchParams.set('redirect', pathname);
-  return NextResponse.redirect(loginUrl);
-}

@@ -6,7 +6,7 @@ const resendClient = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 export interface ConfirmationEmailInput {
   to: string;
   fullName: string;
-  qrDataUrl: string;
+  qrBuffer: Buffer; // Changed from qrDataUrl to qrBuffer
   conferenceName: string;
   conferenceLocation: string | null;
   conferenceStartDate: string | null;
@@ -50,7 +50,7 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
       <h3 style="color: #2563eb; margin-top: 24px;">Kodi Juaj QR</h3>
       <p>Më poshtë gjeni kodin tuaj QR. Ju lutemi ruajeni këtë kod (p.sh. si screenshot), pasi që do të përdoret për identifikimin tuaj në hyrje të konferencës. Skanimi i kodit bëhet pa pasur nevojë për internet.</p>
       <p style="text-align:center; margin: 20px 0;">
-        <img src="${input.qrDataUrl}" alt="Kodi QR" style="width:220px;height:220px;border:1px solid #eee;padding:8px;border-radius:12px;" />
+        <img src="cid:qr-code" alt="Kodi QR" style="width:220px;height:220px;border:1px solid #eee;padding:8px;border-radius:12px;" />
       </p>
       
       <h3 style="color: #2563eb; margin-top: 24px;">Detajet e Pagesës për Pjesëmarrje</h3>
@@ -83,7 +83,14 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
       from: `Shoqata Farmaceutike e Kosovës <${RESEND_FROM_EMAIL}>`,
       to: input.to,
       subject,
-      html
+      html,
+      attachments: [
+        {
+          filename: 'qrcode.png',
+          content: input.qrBuffer,
+          content_id: 'qr-code',
+        } as any,
+      ],
     });
 
     if (error) {

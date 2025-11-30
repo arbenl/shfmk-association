@@ -10,7 +10,7 @@ import {
 } from "@/lib/supabase";
 import { RegistrationTokenPayload, signRegistrationToken } from "@shfmk/shared";
 import { QR_PRIVATE_KEY_PEM, ensureServerEnv } from "@/lib/env";
-import { createQrDataUrl } from "@/lib/qr";
+import { createQrBuffer, createQrDataUrl } from "@/lib/qr";
 import { sendConfirmationEmail } from "@/lib/email";
 
 // Schema for validating the request body
@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
     if (existingRegistration) {
       try {
         // If the user is already registered, resend the confirmation email as a courtesy.
-        const qrDataUrl = await createQrDataUrl(existingRegistration.qr_token);
+        const qrBuffer = await createQrBuffer(existingRegistration.qr_token);
         await sendConfirmationEmail({
           to: existingRegistration.email,
           fullName: existingRegistration.full_name,
-          qrDataUrl,
+          qrBuffer,
           conferenceName: conference.name,
           conferenceLocation: conference.location,
           conferenceStartDate: conference.start_date,
@@ -112,13 +112,13 @@ export async function POST(req: NextRequest) {
     });
 
     // 6. Send confirmation email (best effort)
-    const qrDataUrl = await createQrDataUrl(token);
+    const qrBuffer = await createQrBuffer(token);
     let emailSent = false;
     try {
       await sendConfirmationEmail({
         to: registration.email,
         fullName: registration.full_name,
-        qrDataUrl,
+        qrBuffer,
         conferenceName: conference.name,
         conferenceLocation: conference.location,
         conferenceStartDate: conference.start_date,
