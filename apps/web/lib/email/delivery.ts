@@ -16,11 +16,20 @@ export async function dispatchConfirmationEmail(params: {
   type: DispatchType;
 }) {
   const { registration, conference, type } = params;
-  const outbox = await createEmailOutboxEntry({
-    registrationId: registration.id,
-    type,
-    status: "pending",
-  });
+
+  // Outbox is best-effort so resend works even if migrations aren’t applied locally.
+  let outbox: Awaited<ReturnType<typeof createEmailOutboxEntry>> | null = null;
+  try {
+    outbox = await createEmailOutboxEntry({
+      registrationId: registration.id,
+      type,
+      status: "pending",
+    });
+  } catch (err) {
+    console.warn("[dispatchConfirmationEmail] outbox insert skipped", {
+      error: (err as Error).message,
+    });
+  }
 
   await updateRegistrationEmailMeta(registration.id, {
     status: "pending",
@@ -47,11 +56,13 @@ export async function dispatchConfirmationEmail(params: {
       verifyUrl: buildVerifyUrl(registration.qr_token),
     });
 
-    await updateEmailOutboxStatus(outbox.id, {
-      status: "sent",
-      provider_id: provider?.id ?? null,
-      attempts: outbox.attempts + 1,
-    });
+    if (outbox) {
+      await updateEmailOutboxStatus(outbox.id, {
+        status: "sent",
+        provider_id: provider?.id ?? null,
+        attempts: outbox.attempts + 1,
+      });
+    }
 
     await updateRegistrationEmailMeta(registration.id, {
       status: "sent",
@@ -65,11 +76,13 @@ export async function dispatchConfirmationEmail(params: {
   } catch (err) {
     const errorMessage = (err as Error).message;
 
-    await updateEmailOutboxStatus(outbox.id, {
-      status: "failed",
-      last_error: errorMessage,
-      attempts: outbox.attempts + 1,
-    });
+    if (outbox) {
+      await updateEmailOutboxStatus(outbox.id, {
+        status: "failed",
+        last_error: errorMessage,
+        attempts: outbox.attempts + 1,
+      });
+    }
 
     await updateRegistrationEmailMeta(registration.id, {
       status: "failed",
