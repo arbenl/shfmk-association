@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
 import { sendEmail } from "./email/resend";
 
 export interface ConfirmationEmailInput {
@@ -29,6 +31,22 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
+
+    // Register a bundled Helvetica AFM if available to avoid runtime file lookups in serverless
+    const helveticaCandidates = [
+      path.join(process.cwd(), "node_modules/pdfkit/js/data/Helvetica.afm"),
+      path.join(process.cwd(), "apps/web/node_modules/pdfkit/js/data/Helvetica.afm"),
+    ];
+    const helveticaPath = helveticaCandidates.find((p) => fs.existsSync(p));
+    if (helveticaPath) {
+      try {
+        const helvetica = fs.readFileSync(helveticaPath);
+        doc.registerFont("Body", helvetica);
+        doc.font("Body");
+      } catch (err) {
+        console.warn("[pdf] failed to register Helvetica, using default", (err as Error).message);
+      }
+    }
 
     doc.fontSize(20).text("Konferenca SHFK", { align: "center" });
     doc.moveDown(0.5);
