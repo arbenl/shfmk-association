@@ -112,14 +112,23 @@ export async function POST(req: NextRequest) {
       type: "initial",
     });
 
+    if (!sendResult.success) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "EMAIL_FAILED",
+          error: sendResult.error ?? "Dërgimi i email-it (me PDF) dështoi.",
+          registrationId: registration.id,
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       status: "CREATED",
       registrationId: registration.id,
-      emailSent: sendResult.success,
-      message: sendResult.success
-        ? undefined
-        : "Regjistrimi u ruajt, por dërgimi i email-it dështoi. Përdorni Ridërgo email nga faqja e suksesit.",
+      emailSent: true,
       code: "CREATED",
     });
 

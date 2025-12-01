@@ -11,14 +11,14 @@ function isRateLimited(key: string) {
   const entry = rateMemory.get(key);
   if (!entry || entry.resetAt < now) {
     rateMemory.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
+    return { limited: false, remaining: RATE_LIMIT - 1 };
   }
   if (entry.count >= RATE_LIMIT) {
-    return true;
+    return { limited: true, remaining: 0 };
   }
   entry.count += 1;
   rateMemory.set(key, entry);
-  return false;
+  return { limited: false, remaining: RATE_LIMIT - entry.count };
 }
 
 // Public endpoint to request a resend without revealing existence of registration.
@@ -34,10 +34,15 @@ export async function POST(req: NextRequest) {
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       "unknown";
     const rateKey = `${ip}:${email ?? registrationId ?? "none"}`;
-    if (isRateLimited(rateKey)) {
+    const rate = isRateLimited(rateKey);
+    if (rate.limited) {
       return NextResponse.json(
-        { ok: true, message: "Nëse ekziston një regjistrim, email-i do të ridërgohet së shpejti." },
-        { status: 200 }
+        {
+          ok: false,
+          code: "RATE_LIMITED",
+          message: "Kërkesa e ridërgimit u kufizua. Provo sërish pas 15 minutash.",
+        },
+        { status: 429 }
       );
     }
 
@@ -56,11 +61,27 @@ export async function POST(req: NextRequest) {
     }
 
     if (registration && conference) {
-      await dispatchConfirmationEmail({
+      const result = await dispatchConfirmationEmail({
         registration,
         conference,
         type: "self_resend",
       });
+
+      if (!result.success) {
+        console.error("[/api/resend-public] send failed", {
+          registrationId: registration.id,
+          email,
+          error: result.error,
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "SEND_FAILED",
+            error: result.error ?? "Dërgimi dështoi.",
+          },
+          { status: 502 }
+        );
+      }
     }
 
     return NextResponse.json({
@@ -70,8 +91,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[/api/resend-public] Error:", error);
     return NextResponse.json({
-      ok: true,
-      message: "Kërkesa u pranua. Nëse ekziston një regjistrim, email-i do të ridërgohet.",
+      ok: false,
+      code: "UNEXPECTED_ERROR",
+      error: "Kërkesa dështoi. Ju lutemi provoni përsëri.",
     });
   }
 }
