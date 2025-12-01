@@ -49,7 +49,7 @@ export default async function HomePage() {
       max_participants: 300,
       currency: "EUR",
       member_fee: 30,
-      non_member_fee: 25,
+      non_member_fee: 35,
       student_fee: 0,
     };
   }
@@ -242,11 +242,11 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-12 text-left">
             <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
               <div className="text-sm text-blue-200 mb-1">Farmacist</div>
-              <div className="text-3xl font-bold">30 {conference.currency}</div>
+              <div className="text-3xl font-bold">35 {conference.currency}</div>
             </div>
             <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
               <div className="text-sm text-blue-200 mb-1">Teknik</div>
-              <div className="text-3xl font-bold">25 {conference.currency}</div>
+              <div className="text-3xl font-bold">35 {conference.currency}</div>
             </div>
           </div>
 

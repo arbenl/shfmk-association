@@ -171,11 +171,11 @@ export default async function ConferencePage() {
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="member_fee">Farmacist</Label>
-                                <Input id="member_fee" name="member_fee" type="number" defaultValue={conference.member_fee || 30} />
+                                <Input id="member_fee" name="member_fee" type="number" defaultValue={conference.member_fee || 35} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="non_member_fee">Teknik</Label>
-                                <Input id="non_member_fee" name="non_member_fee" type="number" defaultValue={conference.non_member_fee || 25} />
+                                <Input id="non_member_fee" name="non_member_fee" type="number" defaultValue={conference.non_member_fee || 35} />
                                 </div>
                                 <Input type="hidden" name="student_fee" value="0" />
                             </CardContent>

@@ -104,8 +104,8 @@ export default function RegisterPage() {
         <CardContent>
           <form action={formAction} className="grid gap-4">
             <div>
-              <Label htmlFor="fullName">Emri i plotë</Label>
-              <Input required id="fullName" name="fullName" placeholder="Emri i plotë" />
+              <Label htmlFor="fullName">Emri dhe Mbiemri</Label>
+              <Input required id="fullName" name="fullName" placeholder="Emri dhe Mbiemri" />
               {state.errors?.fullName && <p className="text-sm text-red-500">{state.errors.fullName}</p>}
             </div>
             <div>
@@ -126,12 +126,12 @@ export default function RegisterPage() {
             <div>
               <Label htmlFor="category">Kategoria</Label>
               <Select name="category" defaultValue="farmacist">
-                <SelectTrigger>
+                <SelectTrigger className="bg-white text-slate-900">
                   <SelectValue placeholder="Zgjidh kategorinë" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="farmacist">Farmacist</SelectItem>
-                  <SelectItem value="teknik">Teknik</SelectItem>
+                <SelectContent className="bg-white text-slate-900">
+                  <SelectItem value="farmacist" className="hover:bg-slate-100">Farmacist</SelectItem>
+                  <SelectItem value="teknik" className="hover:bg-slate-100">Teknik</SelectItem>
                 </SelectContent>
               </Select>
             </div>
