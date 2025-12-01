@@ -108,7 +108,7 @@ export default async function AdminRegistrations({
           <CardContent>
             <div className="text-xs space-y-1">
               <div className="flex justify-between"><span>Farmacist:</span> <span>{memberCount}</span></div>
-              <div className="flex justify-between"><span>Teknik i Farmacisë:</span> <span>{nonMemberCount}</span></div>
+              <div className="flex justify-between"><span>Teknik:</span> <span>{nonMemberCount}</span></div>
             </div>
           </CardContent>
         </Card>
@@ -186,11 +186,11 @@ export default async function AdminRegistrations({
                 <TableRow key={reg.id}>
                   <TableCell className="font-medium">{reg.full_name}</TableCell>
                   <TableCell>{reg.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {reg.category === 'farmacist' ? 'Farmacist' : 'Teknik i Farmacisë'}
-                    </Badge>
-                  </TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {reg.category === 'farmacist' ? 'Farmacist' : 'Teknik'}
+                  </Badge>
+                </TableCell>
                   <TableCell>
                     {reg.participation_type === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"}
                   </TableCell>

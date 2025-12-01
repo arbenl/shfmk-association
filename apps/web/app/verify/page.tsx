@@ -101,7 +101,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-muted-foreground">Kategoria:</span>
                                 <Badge variant="outline">
-                                    {payload.cat === 'farmacist' ? 'Farmacist' : 'Teknik i Farmacisë'}
+                                    {payload.cat === 'farmacist' ? 'Farmacist' : 'Teknik'}
                                 </Badge>
                             </div>
                             <div className="flex justify-between items-center">
@@ -115,8 +115,8 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
                                 </div>
                             )}
                         </div>
-                        <div className={`pt-4 border-t ${wasAlreadyCheckedIn ? 'bg-yellow-50' : 'bg-green-50'} -mx-6 -mb-6 px-6 py-4 rounded-b-lg`}>
-                            <p className="text-sm font-medium text-center text-green-800">Regjistrimi/Check-in realizohet vetëm nga vullnetarët në hyrje.</p>
+                        <div className="pt-4 border-t -mx-6 -mb-6 px-6 py-4 rounded-b-lg bg-slate-50">
+                            <p className="text-xs text-center text-slate-700">Ky kod verifikohet në hyrje nga vullnetarët.</p>
                             {wasAlreadyCheckedIn && (
                                 <p className="text-xs text-center text-yellow-800 mt-2">Kjo biletë është skanuar më parë.</p>
                             )}

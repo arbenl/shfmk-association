@@ -26,6 +26,8 @@ export const SITE_BASE_URL =
   cleanEnv(process.env.SITE_BASE_URL) ||
   "http://localhost:3000";
 export const NODE_ENV = process.env.NODE_ENV;
+export const SCANNER_ANDROID_URL = cleanEnv(process.env.SCANNER_ANDROID_URL);
+export const SCANNER_IOS_URL = cleanEnv(process.env.SCANNER_IOS_URL);
 
 /**
  * Checks that all required server-side environment variables are present.

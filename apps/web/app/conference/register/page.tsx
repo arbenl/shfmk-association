@@ -131,15 +131,13 @@ export default function RegisterPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="farmacist">Farmacist</SelectItem>
-                  <SelectItem value="teknik">Teknik i Farmacisë</SelectItem>
+                  <SelectItem value="teknik">Teknik</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
-              <p className="font-semibold">Pikët OMK</p>
-              <p>Pjesëmarrës pasiv (ndjekës): 12 pikë.</p>
-              <p>Pjesëmarrës aktiv (vetëm ligjërues/prezentues): 15 pikë.</p>
-              <p className="text-xs mt-1 text-blue-800"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit, jo për pjesëmarrësit e zakonshëm.</p>
+              <p className="font-semibold">Pikët OFK</p>
+              <p>Pikët: 12 (Pjesëmarrës pasiv) / 15 (Pjesëmarrës aktiv)</p>
             </div>
             {state.success && <p className="text-sm text-green-600 font-medium">{state.message}</p>}
             {state.errors && !state.success && <p className="text-sm text-red-500">Ju lutemi korrigjoni gabimet.</p>}

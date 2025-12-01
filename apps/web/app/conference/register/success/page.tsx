@@ -52,9 +52,9 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
               <p><strong>Adresa:</strong> Prishtinë</p>
               <p><strong>Përshkrimi:</strong> {registration.full_name}, pagesë për konferencë</p>
               <p><strong>Vlera për pagesë:</strong> {registration.fee_amount}.00 {registration.currency}</p>
-              <p><strong>Pjesëmarrja:</strong> {registration.participation_type === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"} ({registration.points} pikë)</p>
-              <p><strong>Kategoria:</strong> {registration.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}</p>
-              <p className="text-xs text-blue-800"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit (jo për pjesëmarrësit e zakonshëm).</p>
+              <p><strong>Pjesëmarrja:</strong> {registration.participation_type === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"}</p>
+              <p><strong>Pikët:</strong> 12 (Pjesëmarrës pasiv) / 15 (Pjesëmarrës aktiv)</p>
+              <p><strong>Kategoria:</strong> {registration.category === "farmacist" ? "Farmacist" : "Teknik"}</p>
             </div>
           </div>
 
