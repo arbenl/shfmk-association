@@ -74,18 +74,24 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
 
     doc.text("Kodi juaj QR:", { underline: true });
     doc.moveDown(0.5);
-    doc.image(input.qrBuffer, {
-      fit: [220, 220],
-      align: "center",
-      valign: "center",
-    });
-    if (input.verifyUrl) {
-      doc.moveDown(0.5);
-      doc.fontSize(10).fillColor("#2563eb").text(input.verifyUrl, {
+    try {
+      doc.image(input.qrBuffer, {
+        fit: [220, 220],
         align: "center",
-        link: input.verifyUrl,
+        valign: "center",
       });
+      if (input.verifyUrl) {
+        doc.moveDown(0.5);
+        doc.fontSize(10).fillColor("#2563eb").text(input.verifyUrl, {
+          align: "center",
+          link: input.verifyUrl,
+        });
+        doc.fillColor("black");
+      }
+    } catch (err) {
+      doc.fontSize(12).fillColor("red").text("QR nuk u rendit. Ju lutemi kërkoni ridërgim.");
       doc.fillColor("black");
+      console.warn("[pdf] QR render failed", (err as Error).message);
     }
 
     doc.end();
