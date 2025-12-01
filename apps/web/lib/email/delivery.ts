@@ -43,6 +43,7 @@ export async function dispatchConfirmationEmail(params: {
     const provider = await sendConfirmationEmail({
       to: registration.email,
       fullName: registration.full_name,
+      registrationId: registration.id,
       qrBuffer,
       conferenceName: conference.name,
       conferenceLocation: conference.location,

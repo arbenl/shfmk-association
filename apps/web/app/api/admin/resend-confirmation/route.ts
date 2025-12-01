@@ -63,12 +63,21 @@ export async function POST(req: NextRequest) {
       type: "admin_resend",
     });
 
+    if (!providerResponse.success) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: providerResponse.error ?? "Dërgimi dështoi (PDF i kërkuar).",
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
-      ok: providerResponse.success,
+      ok: true,
       registrationId: registration.id,
       providerId: providerResponse.providerId ?? null,
-      emailSent: providerResponse.success,
-      error: providerResponse.success ? undefined : providerResponse.error,
+      emailSent: true,
     });
   } catch (error) {
     console.error("[admin][resend-confirmation][error]", {

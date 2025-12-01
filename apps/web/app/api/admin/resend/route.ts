@@ -31,11 +31,20 @@ export async function POST(req: NextRequest) {
       type: "admin_resend",
     });
 
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: result.error ?? "Dërgimi dështoi (PDF i kërkuar).",
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
-      ok: result.success,
+      ok: true,
       providerId: result.providerId ?? null,
-      emailSent: result.success,
-      error: result.success ? undefined : result.error,
+      emailSent: true,
     });
   } catch (error) {
     console.error("Admin Resend Error:", error);

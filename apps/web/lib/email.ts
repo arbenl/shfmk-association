@@ -1,11 +1,10 @@
-import PDFDocument from "pdfkit";
-import fs from "fs";
-import path from "path";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { sendEmail } from "./email/resend";
 
 export interface ConfirmationEmailInput {
   to: string;
   fullName: string;
+  registrationId: string;
   qrBuffer: Buffer; // Changed from qrDataUrl to qrBuffer
   conferenceName: string;
   conferenceLocation: string | null;
@@ -25,95 +24,97 @@ function formatDate(date?: string | null) {
 }
 
 async function buildTicketPdf(input: ConfirmationEmailInput) {
-  return new Promise<Buffer>((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 48 });
-    const chunks: Buffer[] = [];
-    doc.on("data", (chunk) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595.28, 841.89]); // A4
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    // Register a bundled Helvetica AFM if available to avoid runtime file lookups in serverless
-    const helveticaCandidates = [
-      path.join(process.cwd(), "node_modules/pdfkit/js/data/Helvetica.afm"),
-      path.join(process.cwd(), "apps/web/node_modules/pdfkit/js/data/Helvetica.afm"),
-    ];
-    const helveticaPath = helveticaCandidates.find((p) => fs.existsSync(p));
-    if (helveticaPath) {
-      try {
-        const helvetica = fs.readFileSync(helveticaPath);
-        doc.registerFont("Body", helvetica);
-        doc.font("Body");
-      } catch (err) {
-        console.warn("[pdf] failed to register Helvetica, using default", (err as Error).message);
-      }
-    }
+  const { width, height } = page.getSize();
+  let y = height - 72;
 
-    doc.fontSize(20).text("Konferenca SHFK", { align: "center" });
-    doc.moveDown(0.5);
-    doc.fontSize(14).text(input.conferenceName, { align: "center" });
-    doc.moveDown(1.2);
+  const drawText = (text: string, size = 12, opts: { bold?: boolean; color?: any } = {}) => {
+    const fontRef = font;
+    const textWidth = fontRef.widthOfTextAtSize(text, size);
+    page.drawText(text, {
+      x: 48,
+      y,
+      size,
+      font: fontRef,
+      color: opts.color ?? rgb(0, 0, 0),
+    });
+    y -= size + 6;
+    return textWidth;
+  };
 
-    doc.fontSize(12).text(`Emri: ${input.fullName}`);
-    doc.text(
-      `Kategoria: ${
-        input.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"
-      }`
-    );
-    doc.text(
-      `Pjesëmarrja: ${
-        input.participationType === "aktiv"
-          ? "Pjesëmarrës aktiv"
-          : "Pjesëmarrës pasiv"
-      } (${input.points} pikë)`
-    );
+  page.drawText("Konferenca SHFK", { x: 48, y, size: 22, font, color: rgb(0, 0.2, 0.6) });
+  y -= 30;
+  page.drawText(input.conferenceName, { x: 48, y, size: 16, font });
+  y -= 28;
 
-    const startDate = formatDate(input.conferenceStartDate);
-    const endDate = formatDate(input.conferenceEndDate);
-    if (startDate) {
-      const dateText =
-        endDate && startDate !== endDate
-          ? `${startDate} - ${endDate}`
-          : startDate;
-      doc.text(`Datat: ${dateText}`);
-    }
-    if (input.conferenceLocation) {
-      doc.text(`Lokacioni: ${input.conferenceLocation}`);
-    }
-    doc.moveDown();
+  drawText(`Emri: ${input.fullName}`);
+  drawText(
+    `Kategoria: ${input.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}`
+  );
+  drawText(
+    `Pjesëmarrja: ${
+      input.participationType === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"
+    } (${input.points} pikë)`
+  );
+  drawText(`Pagesa: ${input.fee}.00 ${input.currency}`);
+  drawText(`ID e regjistrimit: ${input.registrationId}`);
 
-    doc.text("Instruksionet e pagesës:", { underline: true });
-    doc.text("Banka: Pro Credit Bank");
-    doc.text("Nr. llogarisë: 1110240460000163");
-    doc.text("Emri i llogarisë: KOSOVA FARMACEUTICAL SOCIETY");
-    doc.text("Adresa: Prishtinë");
-    doc.text(`Përshkrimi: ${input.fullName}, pagesë për konferencë`);
-    doc.text(`Vlera: ${input.fee}.00 ${input.currency}`);
-    doc.moveDown(1.2);
+  const startDate = formatDate(input.conferenceStartDate);
+  const endDate = formatDate(input.conferenceEndDate);
+  if (startDate) {
+    const dateText = endDate && startDate !== endDate ? `${startDate} - ${endDate}` : startDate;
+    drawText(`Datat: ${dateText}`);
+  }
+  if (input.conferenceLocation) {
+    drawText(`Lokacioni: ${input.conferenceLocation}`);
+  }
+  y -= 10;
+  drawText("Instruksionet e pagesës:", 12, { bold: true });
+  drawText("Banka: Pro Credit Bank");
+  drawText("Nr. llogarisë: 1110240460000163");
+  drawText("Emri i llogarisë: KOSOVA FARMACEUTICAL SOCIETY");
+  drawText("Adresa: Prishtinë");
+  drawText(`Përshkrimi: ${input.fullName}, pagesë për konferencë`);
+  drawText(`Vlera: ${input.fee}.00 ${input.currency}`);
 
-    doc.text("Kodi juaj QR:", { underline: true });
-    doc.moveDown(0.5);
-    try {
-      doc.image(input.qrBuffer, {
-        fit: [220, 220],
-        align: "center",
-        valign: "center",
-      });
-      if (input.verifyUrl) {
-        doc.moveDown(0.5);
-        doc.fontSize(10).fillColor("#2563eb").text(input.verifyUrl, {
-          align: "center",
-          link: input.verifyUrl,
-        });
-        doc.fillColor("black");
-      }
-    } catch (err) {
-      doc.fontSize(12).fillColor("red").text("QR nuk u rendit. Ju lutemi kërkoni ridërgim.");
-      doc.fillColor("black");
-      console.warn("[pdf] QR render failed", (err as Error).message);
-    }
+  y -= 14;
+  drawText("Pikë për pjesëmarrje:", 12, { bold: true });
+  drawText("Pjesëmarrës pasiv: 12 pikë");
+  drawText("Pjesëmarrës aktiv (ligjërues/prezentues): 15 pikë");
+  drawText("Shënim: 15 pikë vlejnë vetëm për ligjërues/prezentues.");
 
-    doc.end();
+  y -= 18;
+  drawText("Kodi juaj QR (brenda këtij dokumenti):", 12, { bold: true });
+
+  // Center QR
+  const qrImage = await pdfDoc.embedPng(input.qrBuffer);
+  const qrDim = 200;
+  page.drawImage(qrImage, {
+    x: (width - qrDim) / 2,
+    y: y - qrDim - 10,
+    width: qrDim,
+    height: qrDim,
   });
+  y -= qrDim + 30;
+
+  if (input.verifyUrl) {
+    page.drawText(`Link verifikimi: ${input.verifyUrl}`, {
+      x: 48,
+      y,
+      size: 10,
+      font,
+      color: rgb(0, 0.2, 0.6),
+    });
+    y -= 16;
+  }
+
+  page.drawText("Ky dokument është bileta juaj për hyrje.", { x: 48, y, size: 10, font });
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
 export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
@@ -166,8 +167,8 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
   try {
     pdfBuffer = await buildTicketPdf(input);
   } catch (err) {
-    console.warn("[email] PDF generation failed; sending without PDF", (err as Error).message);
-    pdfBuffer = null;
+    console.error("[email] PDF generation failed", (err as Error).message);
+    throw err;
   }
 
   return sendEmail({
