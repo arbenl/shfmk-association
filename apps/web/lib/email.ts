@@ -111,18 +111,7 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
 
       <div style="background: #0f172a; color: #eef2ff; padding: 16px; border-radius: 12px; margin-top: 24px;">
         <h3 style="margin: 0 0 8px 0;">Kodi Juaj QR</h3>
-        <p style="margin: 0 0 12px 0;">Skanojeni në hyrje. Ruajeni (screenshot ose PDF i bashkëngjitur).</p>
-        <div style="text-align:center; margin: 12px 0;">
-          <img src="cid:qr-code" alt="Kodi Juaj QR" style="width:240px;height:240px;border:1px solid #1e293b;padding:8px;border-radius:12px;background:#fff;" />
-        </div>
-        ${
-          input.verifyUrl
-            ? `<p style="margin: 0; font-size: 13px; color: #cbd5e1;">
-        Link verifikimi: <a href="${input.verifyUrl}" style="color:#bfdbfe;">${input.verifyUrl}</a>
-        </p>`
-            : ""
-        }
-        <p style="margin: 8px 0 0 0; font-size: 13px;">Gjendet edhe në PDF-in e bashkëngjitur.</p>
+        <p style="margin: 0;">Kodi QR është në PDF-in e bashkëngjitur. Ju lutemi hapni PDF-in, ruajeni dhe paraqiteni në hyrje.</p>
       </div>
       
       <h3 style="color: #2563eb; margin-top: 24px;">Detajet e Pagesës për Pjesëmarrje</h3>
@@ -138,7 +127,7 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
       <p style="margin-top: 16px;"><strong>Kategoria:</strong> ${input.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}</p>
       <p style="margin-top: 4px;"><strong>Pjesëmarrja:</strong> ${input.participationType === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"} (${input.points} pikë)</p>
       
-      <p style="margin-top: 24px;">Nëse kodi QR nuk shfaqet, ju lutemi vizitoni faqen e suksesit të regjistrimit duke përdorur linkun që ju është dërguar.</p>
+      <p style="margin-top: 24px;">Nëse PDF-i nuk hapet, na kontaktoni për ridërgim.</p>
       <p style="margin-top: 12px; font-size:13px; color:#374151;">Pjesëmarrës pasiv (ndjekës): 12 pikë. Pjesëmarrës aktiv (vetëm ligjërues/prezentues): 15 pikë.</p>
       <p style="margin-top: 4px; font-size:12px; color:#6b7280;"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit (jo për pjesëmarrësit e zakonshëm).</p>
       
@@ -161,26 +150,14 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
     to: input.to,
     subject,
     html,
-    attachments: [
-      {
-        filename: "qr.png",
-        content: input.qrBuffer,
-      // CID for inline image rendering in clients (Gmail/Outlook)
-      content_id: "qr-code",
-      contentId: "qr-code",
-      cid: "qr-code",
-      disposition: "inline",
-      contentType: "image/png",
-    } as any,
-      ...(pdfBuffer
-        ? [
-            {
-              filename: "Bileta-Konference.pdf",
-              content: pdfBuffer,
-              contentType: "application/pdf",
-            } as any,
-          ]
-        : []),
-    ],
+    attachments: pdfBuffer
+      ? [
+          {
+            filename: "Bileta-Konference.pdf",
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          } as any,
+        ]
+      : [],
   });
 }
