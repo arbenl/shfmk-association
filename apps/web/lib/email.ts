@@ -100,18 +100,7 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
   });
   y -= qrDim + 30;
 
-  if (input.verifyUrl) {
-    page.drawText(`Link verifikimi: ${input.verifyUrl}`, {
-      x: 48,
-      y,
-      size: 10,
-      font,
-      color: rgb(0, 0.2, 0.6),
-    });
-    y -= 16;
-  }
-
-  page.drawText("Ky dokument është bileta juaj për hyrje.", { x: 48, y, size: 10, font });
+  page.drawText("Ky dokument është bileta juaj për hyrje. Check-in realizohet vetëm nga vullnetarët në hyrje.", { x: 48, y, size: 10, font });
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
