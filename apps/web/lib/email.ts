@@ -51,14 +51,13 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
   y -= 28;
 
   drawText(`Emri: ${input.fullName}`);
-  drawText(
-    `Kategoria: ${input.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}`
-  );
+  drawText(`Kategoria: ${input.category === "farmacist" ? "Farmacist" : "Teknik"}`);
   drawText(
     `Pjesëmarrja: ${
       input.participationType === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"
-    } (${input.points} pikë)`
+    }`
   );
+  drawText("Pikët: 12 (Pjesëmarrës pasiv) / 15 (Pjesëmarrës aktiv)");
   drawText(`Pagesa: ${input.fee}.00 ${input.currency}`);
   drawText(`ID e regjistrimit: ${input.registrationId}`);
 
@@ -81,11 +80,6 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
   drawText(`Vlera: ${input.fee}.00 ${input.currency}`);
 
   y -= 14;
-  drawText("Pikë për pjesëmarrje:", 12, { bold: true });
-  drawText("Pjesëmarrës pasiv: 12 pikë");
-  drawText("Pjesëmarrës aktiv (ligjërues/prezentues): 15 pikë");
-  drawText("Shënim: 15 pikë vlejnë vetëm për ligjërues/prezentues.");
-
   y -= 18;
   drawText("Kodi juaj QR (brenda këtij dokumenti):", 12, { bold: true });
 
@@ -100,7 +94,10 @@ async function buildTicketPdf(input: ConfirmationEmailInput) {
   });
   y -= qrDim + 30;
 
-  page.drawText("Ky dokument është bileta juaj për hyrje. Check-in realizohet vetëm nga vullnetarët në hyrje.", { x: 48, y, size: 10, font });
+  page.drawText(
+    "Ky dokument është bileta juaj për hyrje. Ky kod verifikohet në hyrje nga vullnetarët për check-in.",
+    { x: 48, y, size: 10, font }
+  );
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
@@ -120,7 +117,8 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
   const html = `
     <div style="font-family: Arial, sans-serif; color: #111; max-width: 600px; margin: 0 auto;">
       <p>Përshëndetje ${input.fullName},</p>
-      <p>Faleminderit për regjistrimin tuaj në konferencën <strong>"${input.conferenceName}"</strong>.</p>
+      <p>Faleminderit për regjistrimin tuaj në konferencën “Konferenca Vjetore ShFarmK 2025”.</p>
+      <p style="margin: 0; font-weight: 600; color: #111;">Akredituar nga OFK: 12 pikë (pjesëmarrës pasiv)/ 15 pikë (pjesëmarrës aktiv)</p>
       ${conferenceDetails}
 
       <div style="background: #0f172a; color: #eef2ff; padding: 16px; border-radius: 12px; margin-top: 24px;">
@@ -138,12 +136,10 @@ export async function sendConfirmationEmail(input: ConfirmationEmailInput) {
         <p style="margin: 8px 0;"><strong>Vlera për pagesë:</strong> ${input.fee}.00 ${input.currency}</p>
       </div>
       
-      <p style="margin-top: 16px;"><strong>Kategoria:</strong> ${input.category === "farmacist" ? "Farmacist" : "Teknik i Farmacisë"}</p>
-      <p style="margin-top: 4px;"><strong>Pjesëmarrja:</strong> ${input.participationType === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"} (${input.points} pikë)</p>
+      <p style="margin-top: 16px;"><strong>Kategoria:</strong> ${input.category === "farmacist" ? "Farmacist" : "Teknik"}</p>
+      <p style="margin-top: 4px;"><strong>Pjesëmarrja:</strong> ${input.participationType === "aktiv" ? "Pjesëmarrës aktiv" : "Pjesëmarrës pasiv"}</p>
       
       <p style="margin-top: 24px;">Nëse PDF-i nuk hapet, na kontaktoni për ridërgim.</p>
-      <p style="margin-top: 12px; font-size:13px; color:#374151;">Pjesëmarrës pasiv (ndjekës): 12 pikë. Pjesëmarrës aktiv (vetëm ligjërues/prezentues): 15 pikë.</p>
-      <p style="margin-top: 4px; font-size:12px; color:#6b7280;"><strong>Shënim:</strong> 15 pikë vlejnë vetëm për ligjëruesit/prezentuesit (jo për pjesëmarrësit e zakonshëm).</p>
       
       <p style="margin-top: 32px;">Me respekt,<br /><strong>Shoqata Farmaceutike e Kosovës</strong></p>
       <p style="font-size: 12px; color: #666; margin-top: 16px;">

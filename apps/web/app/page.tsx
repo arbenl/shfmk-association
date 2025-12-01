@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Clock, Users, ArrowRight, CheckCircle2, Phone, Mail } from "lucide-react";
+import { Calendar, MapPin, Clock, ArrowRight, CheckCircle2, Phone, Mail } from "lucide-react";
 import { getConferenceBySlug, getSiteSettings } from "@/lib/supabase";
 import { CONFERENCE_SLUG } from "@/lib/env";
 
@@ -25,10 +24,6 @@ const LEGACY_FAQS = [
     q: "Nuk e kam marrë email-in. Çfarë të bëj?",
     a: "Ju lutemi kontrolloni folderin tuaj të spam-it. Nëse ende nuk e gjeni, mund të përdorni opsionin 'Dërgo përsëri emailin' në faqen e suksesit.",
   },
-  {
-    q: "A funksionon skanimi offline?",
-    a: "Po, aplikacioni i skanimit është dizajnuar të funksionojë offline, duke siguruar hyrje të pandërprerë.",
-  },
 ];
 
 export default async function HomePage() {
@@ -39,9 +34,9 @@ export default async function HomePage() {
   if (!conference) {
     conference = {
       id: "legacy",
-      name: "E Ardhmja e Farmacisë: Edukimi, Inovacioni dhe Qëndrueshmëria",
+      name: "Konferenca Vjetore ShFarmK 2025",
       slug: CONFERENCE_SLUG,
-      subtitle: "Një jubile i 60-vjetorit të Shoqatës Farmaceutike të Kosovës",
+      subtitle: "Bashkohuni me profesionistët e farmacisë për të diskutuar të ardhmen, inovacionin dhe zhvillimin e qëndrushëm në farmaci.",
       start_date: "2025-12-13T08:30:00",
       end_date: null,
       location: "Hotel Emerald",
@@ -53,11 +48,15 @@ export default async function HomePage() {
       agenda_json: [],
       max_participants: 300,
       currency: "EUR",
-      member_fee: 35,
-      non_member_fee: 30,
+      member_fee: 30,
+      non_member_fee: 25,
       student_fee: 0,
     };
   }
+
+  const heroTitle = "Konferenca Vjetore ShFarmK 2025";
+  const heroSubtitle =
+    "Bashkohuni me profesionistët e farmacisë për të diskutuar të ardhmen, inovacionin dhe zhvillimin e qëndrushëm në farmaci.";
 
   // Parse agenda if string
   let agenda = conference.agenda_json;
@@ -73,14 +72,11 @@ export default async function HomePage() {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-b from-blue-50 to-white py-20 lg:py-32">
         <div className="container mx-auto px-4 text-center">
-          <Badge variant="secondary" className="mb-6 px-4 py-1 text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200">
-            {conference.subtitle || "Konferenca Vjetore"}
-          </Badge>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl lg:text-7xl mb-6">
-            {conference.name}
+            {heroTitle}
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-slate-600 mb-10 leading-relaxed">
-            Bashkohuni me profesionistët e farmacisë për të diskutuar të ardhmen, inovacionin dhe zhvillimin e qëndrueshëm në shëndetësi.
+            {heroSubtitle}
           </p>
 
           <div className="flex flex-wrap justify-center gap-4 mb-10 text-sm font-medium text-slate-700">
@@ -142,9 +138,9 @@ export default async function HomePage() {
                 </Card>
                 <Card className="border-amber-100 bg-amber-50/60">
                   <CardContent className="p-4">
-                    <p className="text-xs uppercase text-amber-700">Kredite & Pjesëmarrje</p>
-                    <p className="mt-1 font-semibold text-slate-900">{conference.max_participants || "300"}+ pjesëmarrës</p>
-                    <p className="text-sm text-slate-600">Pikë për OMK</p>
+                    <p className="text-xs uppercase text-amber-700 leading-tight">
+                      Akredituar nga OFK, 12 pikë (pjesëmarrës pasiv) / 15 pikë (pjesëmarrës aktiv)
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -176,14 +172,7 @@ export default async function HomePage() {
       {/* Stats / Overview */}
       <section className="py-16 bg-white border-y">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-1">{conference.max_participants || "300"}+</h3>
-              <p className="text-slate-600">Pjesëmarrës</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
             <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
                 <Clock className="h-6 w-6 text-purple-600" />
@@ -195,8 +184,9 @@ export default async function HomePage() {
               <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-1">Kredite</h3>
-              <p className="text-slate-600">Pikë për OMK</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-1 text-center leading-tight">
+                Akredituar nga OFK, 12 pikë (pjesëmarrës pasiv) / 15 pikë (pjesëmarrës aktiv)
+              </h3>
             </div>
           </div>
         </div>
@@ -221,7 +211,6 @@ export default async function HomePage() {
                     <h3 className="text-lg font-semibold text-slate-900 mb-2">{session.title}</h3>
                     {session.speaker && (
                       <div className="flex items-center gap-2 text-slate-600 mb-2">
-                        <Users className="h-4 w-4" />
                         <span className="font-medium">{session.speaker}</span>
                       </div>
                     )}
@@ -253,11 +242,11 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-12 text-left">
             <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
               <div className="text-sm text-blue-200 mb-1">Farmacist</div>
-              <div className="text-3xl font-bold">35 {conference.currency}</div>
+              <div className="text-3xl font-bold">30 {conference.currency}</div>
             </div>
             <div className="bg-white/10 backdrop-blur p-6 rounded-xl border border-white/20">
-              <div className="text-sm text-blue-200 mb-1">Teknik i Farmacisë</div>
-              <div className="text-3xl font-bold">30 {conference.currency}</div>
+              <div className="text-sm text-blue-200 mb-1">Teknik</div>
+              <div className="text-3xl font-bold">25 {conference.currency}</div>
             </div>
           </div>
 

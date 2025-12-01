@@ -3,13 +3,15 @@ import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator, ScrollView } from "react-native";
 import { Camera, CameraPermissionStatus, CameraType, BarCodeScannedResult } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
-import { verifyRegistrationToken } from "@shfmk/shared";
-import { getPublicKeyPem } from "./constants";
-import { getCheckIns, saveCheckIn, clearCheckIns, getAdminSecret, saveAdminSecret } from "./storage";
+import { getCheckIns, clearCheckIns, getAdminSecret, saveAdminSecret } from "./storage";
 
 type ScanState =
   | { status: "idle" }
-  | { status: "valid"; repeat: boolean; payload: { name: string; cat: string; conf: string; sub: string } }
+  | {
+      status: "valid";
+      repeat: boolean;
+      payload: { name: string; cat: string; conf: string; sub: string; checkedInAt?: string | null };
+    }
   | { status: "invalid"; message: string };
 
 type SyncState = "idle" | "syncing" | "success" | "error";
@@ -21,7 +23,6 @@ export default function App() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanState, setScanState] = useState<ScanState>({ status: "idle" });
   const [scanned, setScanned] = useState(false);
-  const [publicKeyPem, setPublicKeyPem] = useState<string | null>(null);
   const [checkIns, setCheckIns] = useState<
     { registrationId: string; scannedAt: string; name: string; cat: string; conf: string }[]
   >([]);
@@ -33,9 +34,6 @@ export default function App() {
     const init = async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setHasPermission(status === CameraPermissionStatus.GRANTED);
-
-      const key = await getPublicKeyPem();
-      setPublicKeyPem(key);
 
       const storedCheckins = await getCheckIns();
       setCheckIns(storedCheckins);
@@ -55,42 +53,56 @@ export default function App() {
 
   async function handleBarCodeScanned(result: BarCodeScannedResult) {
     setScanned(true);
-    if (!publicKeyPem) {
-      setScanState({ status: "invalid", message: "Mungon çelësi publik. Rinisni aplikacionin." });
+
+    if (!adminSecret) {
+      setScanState({
+        status: "invalid",
+        message: "Vendosni çelësin sekret (x-admin-key) për të kryer check-in.",
+      });
       return;
     }
 
-    try {
-      let token = result.data;
-      // Handle URL format: http://.../verify?token=...
-      if (token.includes("token=")) {
+    let token = result.data;
+    if (token.includes("token=")) {
+      try {
         const url = new URL(token);
         const extracted = url.searchParams.get("token");
         if (extracted) token = extracted;
+      } catch {
+        // fallback: keep original token
+      }
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/checkin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminSecret,
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error ?? "Bileta e pavlefshme.");
       }
 
-      const payload = await verifyRegistrationToken(token, publicKeyPem);
-
-      // Check if already scanned locally
-      const existing = checkIns.find((c) => c.registrationId === payload.sub);
-
-      const checkInRecord = {
-        registrationId: payload.sub,
-        scannedAt: new Date().toISOString(),
-        name: payload.name,
-        cat: payload.cat,
-        conf: payload.conf
+      const repeat = data.status === "already_checked_in" || data.alreadyCheckedIn;
+      const payload = {
+        name: data.fullName ?? "Pjesëmarrës",
+        cat: data.category ?? "",
+        conf: data.conferenceName ?? "",
+        sub: data.registrationId ?? "",
+        checkedInAt: data.checkedInAt,
       };
 
-      if (!existing) {
-        await saveCheckIn(checkInRecord);
-        setCheckIns((prev) => [checkInRecord, ...prev]);
-        setScanState({ status: "valid", repeat: false, payload });
-      } else {
-        setScanState({ status: "valid", repeat: true, payload });
-      }
+      setScanState({ status: "valid", repeat, payload });
     } catch (error) {
-      setScanState({ status: "invalid", message: "QR Kod i pavlefshëm ose i dëmtuar." });
+      setScanState({
+        status: "invalid",
+        message: (error as Error).message || "Bileta e pavlefshme.",
+      });
     }
   }
 
@@ -149,22 +161,22 @@ export default function App() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <StatusBar style="light" />
-      <Text style={styles.title}>SHFMK Scanner</Text>
-      <Text style={styles.subTitle}>Check-in & Verifikim</Text>
+      <Text style={styles.title}>SHFK Scanner</Text>
+      <Text style={styles.subTitle}>Check-in me një hap</Text>
 
       {/* STATUS CARD */}
       <View style={[styles.statusCard, { borderColor: statusColor, backgroundColor: statusColor + '20' }]}>
         {scanState.status === "valid" && (
           <>
             <Text style={[styles.statusLabel, { color: statusColor }]}>
-              {scanState.repeat ? "⚠️ TASHMË I SKANUAR" : "✅ I REGJISTRUAR"}
+              {scanState.repeat ? "ℹ️ Pjesëmarrësi është check-in më herët" : "✅ Check-in u krye"}
             </Text>
             <Text style={styles.name}>{scanState.payload.name}</Text>
             <Text style={styles.detail}>{scanState.payload.cat.toUpperCase()}</Text>
             <Text style={styles.detail}>{scanState.payload.conf}</Text>
             <View style={[styles.badge, { backgroundColor: statusColor }]}>
               <Text style={styles.badgeText}>
-                {scanState.repeat ? "Hyrja u shënua më parë" : "Hyrje e Lejuar"}
+                {scanState.repeat ? "Shënuar më herët" : "Check-in i kryer"}
               </Text>
             </View>
           </>
@@ -404,4 +416,3 @@ const styles = StyleSheet.create({
     marginTop: 24
   }
 });
-
