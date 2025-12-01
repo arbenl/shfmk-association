@@ -54,29 +54,13 @@ async function handleVerify(token?: string) {
       );
     }
 
-    const { data: updateData, error: updateError } = await supabase
-      .from("registrations")
-      .update({
-        checked_in: true,
-        checked_in_at: new Date().toISOString(),
-      })
-      .eq("id", payload.sub)
-      .eq("checked_in", false)
-      .select();
-
-    const alreadyCheckedIn = !!updateError || !updateData || updateData.length === 0;
-    const checkedInAt =
-      alreadyCheckedIn && registration.checked_in_at
-        ? registration.checked_in_at
-        : updateData?.[0]?.checked_in_at;
-
     return NextResponse.json({
       ok: true,
       registrationId: registration.id,
       fullName: registration.full_name,
       category: registration.category,
-      alreadyCheckedIn,
-      checkedInAt,
+      alreadyCheckedIn: registration.checked_in,
+      checkedInAt: registration.checked_in_at,
     });
   } catch (error) {
     return NextResponse.json(
