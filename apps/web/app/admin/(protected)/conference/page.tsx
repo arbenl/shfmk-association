@@ -3,6 +3,7 @@ import { CONFERENCE_SLUG } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -172,8 +173,17 @@ export default async function ConferencePage({ searchParams }: { searchParams?: 
                                     <Input id="name" name="name" defaultValue={conference.name} required />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="subtitle">Nëntitulli (Opsional)</Label>
-                                    <Input id="subtitle" name="subtitle" defaultValue={conference.subtitle || ""} placeholder="psh. 60 Vjetori i Themelimit" />
+                                    <Label htmlFor="subtitle" className="text-base font-semibold">Përshkrim (Opsional)</Label>
+                                    <Textarea
+                                        id="subtitle"
+                                        name="subtitle"
+                                        defaultValue={conference.subtitle || ""}
+                                        placeholder="psh. 60 Vjetori i Themelimit — mund të shtoni edhe detaje më të gjata për programin."
+                                        className="min-h-[280px] resize-y text-base leading-relaxed p-4"
+                                    />
+                                    <p className="text-sm text-muted-foreground">
+                                        Mund të shkruani tekst të gjatë për përshkrimin e konferencës. Ruhet në të njëjtën fushë si më parë.
+                                    </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -206,28 +216,50 @@ export default async function ConferencePage({ searchParams }: { searchParams?: 
 
                     {/* Sidebar - Right Column */}
                     <div className="space-y-6">
-                        <Card className="border-blue-200 bg-blue-50/30">
+                        <Card className="border-blue-200 bg-blue-50/40">
                             <CardHeader>
                                 <CardTitle className="text-blue-900">Statusi</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base">Publikuar</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Kur është e ç&apos;publikuar, publiku sheh &quot;Së shpejti&quot; dhe regjistrimi çaktivizohet.
-                                        </p>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-base font-semibold">Publikuar</Label>
+                                                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${conference.is_published ? "bg-green-100 text-green-700 ring-1 ring-green-200" : "bg-slate-200 text-slate-700 ring-1 ring-slate-300"}`}>
+                                                    {conference.is_published ? "ON" : "OFF"}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Kur është e ç&apos;publikuar, publiku sheh &quot;Së shpejti&quot; dhe regjistrimi çaktivizohet.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            name="is_published"
+                                            defaultChecked={!!conference.is_published}
+                                            aria-label="Ndrysho statusin Publikuar"
+                                            className="h-7 w-12 data-[state=checked]:bg-blue-600 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-400"
+                                        />
                                     </div>
-                                    <Switch name="is_published" defaultChecked={!!conference.is_published} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base">Regjistrimi Hapur</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Ky status vetëm shfaq një njoftim publik; formulari i regjistrimit mbetet aktiv.
-                                        </p>
+                                    <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-base font-semibold">Regjistrimi i hapur</Label>
+                                                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${conference.registration_open ? "bg-green-100 text-green-700 ring-1 ring-green-200" : "bg-slate-200 text-slate-700 ring-1 ring-slate-300"}`}>
+                                                    {conference.registration_open ? "ON" : "OFF"}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Ky status vetëm shfaq një njoftim publik; formulari i regjistrimit mbetet aktiv.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            name="registration_open"
+                                            defaultChecked={!!conference.registration_open}
+                                            aria-label="Ndrysho statusin Regjistrimi i hapur"
+                                            className="h-7 w-12 data-[state=checked]:bg-blue-600 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-400"
+                                        />
                                     </div>
-                                    <Switch name="registration_open" defaultChecked={!!conference.registration_open} />
                                 </div>
                                 <Button type="submit" className="w-full" size="lg">Ruaj Ndryshimet</Button>
                             </CardContent>

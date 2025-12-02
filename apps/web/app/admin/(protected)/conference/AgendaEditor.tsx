@@ -109,49 +109,55 @@ export function AgendaEditor({ initialData, name }: AgendaEditorProps) {
             ) : (
                 <div className="space-y-4">
                     {sessions.map((session, idx) => (
-                        <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-white p-3 rounded border shadow-sm">
-                            <div className="col-span-2">
-                                <Label className="text-xs text-muted-foreground">Ora</Label>
-                                <Input
-                                    value={session.time}
-                                    onChange={(e) => updateSession(idx, "time", e.target.value)}
-                                    placeholder="09:00"
-                                />
+                        <div key={idx} className="space-y-3 rounded border bg-white p-3 shadow-sm">
+                            <div className="grid gap-2 md:grid-cols-12">
+                                <div className="md:col-span-2">
+                                    <Label className="text-xs text-muted-foreground">Ora</Label>
+                                    <Input
+                                        value={session.time}
+                                        onChange={(e) => updateSession(idx, "time", e.target.value)}
+                                        placeholder="09:00"
+                                    />
+                                </div>
+                                <div className="md:col-span-5">
+                                    <Label className="text-xs text-muted-foreground">Titulli / Tema</Label>
+                                    <Input
+                                        value={session.title}
+                                        onChange={(e) => updateSession(idx, "title", e.target.value)}
+                                        placeholder="Hapja e konferencës"
+                                    />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <Label className="text-xs text-muted-foreground">Folësi (Opsional)</Label>
+                                    <Input
+                                        value={session.speaker || ""}
+                                        onChange={(e) => updateSession(idx, "speaker", e.target.value)}
+                                        placeholder="Dr. Emri Mbiemri"
+                                    />
+                                </div>
+                                <div className="md:col-span-1 flex items-end justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => removeSession(idx)}
+                                        aria-label="Fshi sesionin"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="col-span-4">
-                                <Label className="text-xs text-muted-foreground">Titulli / Tema</Label>
-                                <Input
-                                    value={session.title}
-                                    onChange={(e) => updateSession(idx, "title", e.target.value)}
-                                    placeholder="Hapja e konferencës"
-                                />
-                            </div>
-                            <div className="col-span-3">
-                                <Label className="text-xs text-muted-foreground">Folësi (Opsional)</Label>
-                                <Input
-                                    value={session.speaker || ""}
-                                    onChange={(e) => updateSession(idx, "speaker", e.target.value)}
-                                    placeholder="Dr. Emri Mbiemri"
-                                />
-                            </div>
-                            <div className="col-span-2">
-                                <Label className="text-xs text-muted-foreground">Përshkrim (Opsional)</Label>
-                                <Input
-                                    value={session.description || ""}
-                                    onChange={(e) => updateSession(idx, "description", e.target.value)}
-                                    placeholder="Detaje..."
-                                />
-                            </div>
-                            <div className="col-span-1 flex items-end justify-center h-full pb-1">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => removeSession(idx)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                            <div className="grid gap-2 md:grid-cols-12">
+                                <div className="md:col-span-12">
+                                    <Label className="text-xs text-muted-foreground">Përshkrim (Opsional)</Label>
+                                    <Textarea
+                                        value={session.description || ""}
+                                        onChange={(e) => updateSession(idx, "description", e.target.value)}
+                                        placeholder="Shto përmbledhje, objektiva, detaje teknike..."
+                                        className="min-h-[140px] resize-y"
+                                    />
+                                </div>
                             </div>
                         </div>
                     ))}
