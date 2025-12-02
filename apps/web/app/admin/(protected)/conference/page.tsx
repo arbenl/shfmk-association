@@ -29,17 +29,13 @@ function StatusToggleCard({ label, description, name, defaultChecked }: StatusTo
                 <Label className="text-base font-semibold">{label}</Label>
                 <p className="text-xs text-muted-foreground">{description}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center justify-end gap-2 shrink-0">
                 <Switch
                     name={name}
                     defaultChecked={defaultChecked}
                     aria-label={`Ndrysho statusin ${label}`}
                     className="peer h-6 w-11 cursor-pointer data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-400"
                 />
-                <span className="min-w-[44px] whitespace-nowrap rounded-full border px-2 py-1 text-center text-xs font-semibold bg-white peer-data-[state=checked]:border-emerald-200 peer-data-[state=checked]:text-emerald-700 peer-data-[state=unchecked]:border-slate-200 peer-data-[state=unchecked]:text-slate-700">
-                    <span className="hidden peer-data-[state=checked]:inline">PO</span>
-                    <span className="inline peer-data-[state=checked]:hidden">JO</span>
-                </span>
             </div>
         </div>
     );
