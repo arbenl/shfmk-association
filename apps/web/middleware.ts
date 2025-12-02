@@ -36,7 +36,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow login page and API to pass through
-  if (pathname.startsWith('/api/admin/login') || pathname === '/admin/login') {
+  if (
+    pathname.startsWith('/api/admin/login') ||
+    pathname.startsWith('/api/admin/logout') ||
+    pathname === '/admin/login'
+  ) {
     return response;
   }
 
@@ -78,6 +82,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/api/admin/((?!login|checkin|email-test|test-email).*)'
+    '/api/admin/((?!login|logout|checkin|email-test|test-email).*)'
   ],
 };
