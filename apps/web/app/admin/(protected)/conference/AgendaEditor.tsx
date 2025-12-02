@@ -95,6 +95,7 @@ export function AgendaEditor({ initialData, name }: AgendaEditorProps) {
 
             {/* Hidden input to submit the actual JSON string */}
             <input type="hidden" name={name} value={jsonValue} />
+            <input type="hidden" name="agenda_json_error" value={jsonError ?? ""} />
 
             {mode === "json" ? (
                 <div className="space-y-2">
@@ -103,7 +104,7 @@ export function AgendaEditor({ initialData, name }: AgendaEditorProps) {
                         onChange={(e) => handleJsonChange(e.target.value)}
                         className="font-mono text-sm h-[400px]"
                     />
-                    {jsonError && <p className="text-red-500 text-sm">{jsonError}</p>}
+                    {jsonError && <p className="text-red-500 text-sm">Gabim në JSON — ruajtja është e bllokuar derisa të rregullohet.</p>}
                 </div>
             ) : (
                 <div className="space-y-4">

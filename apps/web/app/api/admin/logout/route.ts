@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-
-import { createClient } from "@/lib/supabase/server";
+import { createRouteClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient();
+  const nextResponse = NextResponse.json({ ok: true });
+  const { supabase, response } = createRouteClient(req, nextResponse);
+
   await supabase.auth.signOut();
-  return NextResponse.redirect(new URL("/admin/login", req.url));
+
+  const redirectUrl = new URL("/admin/login?signedOut=1", req.url);
+  return NextResponse.redirect(redirectUrl, { headers: response.headers });
 }

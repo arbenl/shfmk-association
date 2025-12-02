@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { QR_PRIVATE_KEY_PEM } from "@/lib/env";
+import { getPublicRegistrationById } from "@/lib/supabase/public";
 
 import { createPublicKey } from "crypto";
 
@@ -58,25 +59,10 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
         const publicKey = await getPublicKey();
         const payload = await verifyRegistrationToken(token, publicKey);
 
-        const { createClient } = await import("@supabase/supabase-js");
-        const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = await import("@/lib/env");
+        const registration = await getPublicRegistrationById(payload.sub);
 
-        if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-            throw new Error("Supabase not configured");
-        }
-
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-            auth: { autoRefreshToken: false, persistSession: false }
-        });
-
-        const { data: registration, error: fetchError } = await supabase
-            .from("registrations")
-            .select("id, full_name, category, checked_in, checked_in_at")
-            .eq("id", payload.sub)
-            .single();
-
-        if (fetchError || !registration) {
-            console.error("[VERIFY] Registration fetch error:", fetchError);
+        if (!registration) {
+            console.error("[VERIFY] Registration fetch error: registration not found");
             throw new Error("Regjistrimi nuk u gjet në bazën e të dhënave");
         }
 
