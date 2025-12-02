@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRegistrationById } from "@/lib/supabase";
+import { getPublicRegistrationById } from "@/lib/supabase/public";
 import { createQrDataUrl } from "@/lib/qr";
 import { ResendButton } from "./ResendButton"; // A new client component
 import { PrintButton } from "./PrintButton";
@@ -23,7 +23,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   }
 
   // Fetch data directly on the server
-  const registration = await getRegistrationById(registrationId);
+  const registration = await getPublicRegistrationById(registrationId);
 
   if (!registration) {
     return <InvalidState message="Regjistrimi me këtë ID nuk u gjet." />;

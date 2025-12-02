@@ -1,4 +1,4 @@
-import { getConferenceBySlug, updateConference } from "@/lib/supabase";
+import { asTimestamptzOrNull, getConferenceBySlug, updateConference } from "@/lib/supabase";
 import { CONFERENCE_SLUG } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,17 +8,60 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createServiceClient } from "@/lib/supabase/server";
 import { AgendaEditor } from "./AgendaEditor";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConferencePage() {
+export default async function ConferencePage({ searchParams }: { searchParams?: { error?: string } }) {
     const conference = await getConferenceBySlug(CONFERENCE_SLUG);
+    const errorCode = searchParams?.error;
+    const errorMessage = errorCode === "invalid-agenda-json"
+        ? "Agjenda nuk u ruajt sepse JSON është i pavlefshëm. Korrigjoni strukturën dhe provoni përsëri."
+        : null;
 
     if (!conference) {
+        const service = createServiceClient();
+        const { data: available } = await service
+            .from("conferences")
+            .select("name, slug, is_published")
+            .order("created_at", { ascending: false });
+
         return (
-            <div className="p-8 text-center text-red-600">
-                Konferenca &quot;{CONFERENCE_SLUG}&quot; nuk u gjet. Ju lutem kontrolloni bazën e të dhënave.
+            <div className="max-w-3xl mx-auto space-y-4">
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Konferenca &quot;{CONFERENCE_SLUG}&quot; nuk u gjet</AlertTitle>
+                    <AlertDescription>
+                        Slug-u në env nuk përputhet me të dhënat. Zgjidhni një nga slug-et ekzistuese ose krijoni një konferencë të re.
+                    </AlertDescription>
+                </Alert>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Slug-et e disponueshme</CardTitle>
+                        <CardDescription>
+                            Përditësoni `CONFERENCE_SLUG` në env për të përputhur një nga slug-et më poshtë.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {available && available.length > 0 ? (
+                            <ul className="space-y-2 text-sm">
+                                {available.map((row) => (
+                                    <li key={row.slug} className="flex items-center justify-between rounded border p-2">
+                                        <span className="font-medium">{row.slug}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {row.name} • {row.is_published ? "Publikuar" : "Draft"}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">Nuk u gjet asnjë konferencë në bazë.</p>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         );
     }
@@ -37,10 +80,27 @@ export default async function ConferencePage() {
 
         if (!conference) return;
 
+        const agendaError = (formData.get("agenda_json_error") as string) || "";
+        if (agendaError) {
+            redirect("/admin/conference?error=invalid-agenda-json");
+        }
+
+        let parsedAgenda: any = [];
+        try {
+            const rawAgenda = (formData.get("agenda_json") as string) || "[]";
+            parsedAgenda = JSON.parse(rawAgenda);
+            if (!Array.isArray(parsedAgenda)) {
+                throw new Error("Agenda must be an array");
+            }
+        } catch (err) {
+            console.error("Invalid agenda JSON:", err);
+            redirect("/admin/conference?error=invalid-agenda-json");
+        }
+
         const raw = {
             name: formData.get("name") as string,
             subtitle: formData.get("subtitle") as string,
-            start_date: formData.get("start_date") as string, // ISO string expected or date input
+            start_date: asTimestamptzOrNull(formData.get("start_date")),
             location: formData.get("location") as string,
             venue_address: formData.get("venue_address") as string,
             venue_city: formData.get("venue_city") as string,
@@ -49,7 +109,7 @@ export default async function ConferencePage() {
             student_fee: 0,
             is_published: formData.get("is_published") === "on",
             registration_open: formData.get("registration_open") === "on",
-            agenda_json: JSON.parse(formData.get("agenda_json") as string || "[]"),
+            agenda_json: parsedAgenda,
         };
 
         await updateConference(conference.id, raw);
@@ -59,6 +119,13 @@ export default async function ConferencePage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
+            {errorMessage && (
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Agjenda nuk u ruajt</AlertTitle>
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+            )}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-gray-900">Menaxho Konferencën</h1>
@@ -147,7 +214,9 @@ export default async function ConferencePage() {
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5">
                                         <Label className="text-base">Publikuar</Label>
-                                        <p className="text-xs text-muted-foreground">Shfaq në faqen kryesore</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Kur është e ç&apos;publikuar, publiku sheh &quot;Së shpejti&quot; dhe regjistrimi çaktivizohet.
+                                        </p>
                                     </div>
                                     <Switch name="is_published" defaultChecked={!!conference.is_published} />
                                 </div>

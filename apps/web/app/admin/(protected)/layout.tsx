@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings, Calendar, Users, Shield } from "lucide-react";
+import { LogoutButton } from "./LogoutButton";
 
 export default function ProtectedAdminLayout({
     children,
@@ -47,12 +48,7 @@ export default function ProtectedAdminLayout({
                         </nav>
                     </div>
 
-                    <form action="/api/auth/signout" method="post">
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Dalja
-                        </Button>
-                    </form>
+                    <LogoutButton />
                 </div>
             </header>
 

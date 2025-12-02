@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { cn } from "@/lib/utils";
-import { getSiteSettings } from "@/lib/supabase";
+import { getPublicConference } from "@/lib/supabase/public";
 
 export const metadata = {
   title: "SHFMK Konferenca",
@@ -14,12 +14,12 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const settings = await getSiteSettings();
+  const { conference, settings } = await getPublicConference();
 
   return (
     <html lang="sq">
       <body className={cn("min-h-screen bg-background font-sans antialiased flex flex-col")}>
-        <Header settings={settings} />
+        <Header settings={settings} showConferenceNav={!!conference} />
         <main className="flex-1">{children}</main>
         <Footer settings={settings} />
       </body>

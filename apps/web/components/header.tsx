@@ -4,9 +4,10 @@ import { SiteSettings } from "@/lib/supabase";
 
 interface HeaderProps {
   settings?: SiteSettings | null;
+  showConferenceNav?: boolean;
 }
 
-export function Header({ settings }: HeaderProps) {
+export function Header({ settings, showConferenceNav = true }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
@@ -19,16 +20,22 @@ export function Header({ settings }: HeaderProps) {
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             <Link href="/">Kryefaqja</Link>
-            <Link href="/#konferenca">Konferenca</Link>
-            <Link href="/#agenda">Agenda</Link>
-            <Link href="/conference/register">Regjistrimi</Link>
-            <Link href="/#kontakti">Kontakti</Link>
+            {showConferenceNav ? (
+              <>
+                <Link href="/#konferenca">Konferenca</Link>
+                <Link href="/#agenda">Agenda</Link>
+                <Link href="/conference/register">Regjistrimi</Link>
+              </>
+            ) : (
+              <Link href="/#kontakti">Kontakti</Link>
+            )}
+            {showConferenceNav && <Link href="/#kontakti">Kontakti</Link>}
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <nav className="flex items-center">
             <Link
-              href="/admin/login"
+              href="/admin/registrations"
               className="mr-3 hidden text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline md:inline-flex"
             >
               Admin

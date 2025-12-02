@@ -21,6 +21,22 @@ function requireClient() {
   return supabaseClient;
 }
 
+export function asTimestamptzOrNull(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const str = String(value).trim();
+  return str === "" ? null : str;
+}
+
+function buildPayload<T extends Record<string, any>>(updates: Partial<T>, allowedKeys: (keyof T)[]) {
+  const payload: Partial<T> = {};
+  for (const key of allowedKeys) {
+    if (key in updates && updates[key] !== undefined) {
+      payload[key] = updates[key];
+    }
+  }
+  return payload;
+}
+
 // --- Interfaces ---
 export interface SiteSettings {
   id: string;
@@ -120,12 +136,42 @@ export async function updateSiteSettings(settings: Partial<SiteSettings>): Promi
 
 export async function updateConference(id: string, updates: Partial<Conference>): Promise<Conference> {
   const client = requireClient();
+  const allowedKeys: (keyof Conference)[] = [
+    "name",
+    "slug",
+    "subtitle",
+    "start_date",
+    "end_date",
+    "location",
+    "venue_address",
+    "venue_city",
+    "registration_open",
+    "registration_deadline",
+    "is_published",
+    "agenda_json",
+    "max_participants",
+    "currency",
+    "member_fee",
+    "non_member_fee",
+    "student_fee",
+  ];
+  const normalized: Partial<Conference> = { ...updates };
+  if ("start_date" in updates) {
+    normalized.start_date = asTimestamptzOrNull(updates.start_date);
+  }
+  if ("end_date" in updates) {
+    normalized.end_date = asTimestamptzOrNull(updates.end_date);
+  }
+  if ("registration_deadline" in updates) {
+    normalized.registration_deadline = asTimestamptzOrNull(updates.registration_deadline);
+  }
+
+  const payload: Partial<Conference> & { updated_at?: string } = buildPayload(normalized, allowedKeys);
+  payload.updated_at = new Date().toISOString();
+
   const { data, error } = await client
     .from("conferences")
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    })
+    .update(payload)
     .eq("id", id)
     .select()
     .single();
