@@ -224,51 +224,45 @@ export default async function ConferencePage({ searchParams }: { searchParams?: 
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
                                         <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <Label className="text-base font-semibold">Publikuar</Label>
-                                                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${conference.is_published ? "bg-green-100 text-green-700 ring-1 ring-green-200" : "bg-slate-200 text-slate-700 ring-1 ring-slate-300"}`}>
-                                                    {conference.is_published ? "PO" : "JO"}
-                                                </span>
-                                            </div>
+                                            <Label className="text-base font-semibold">Publikuar</Label>
                                             <p className="text-xs text-muted-foreground">
                                                 Kur është e ç&apos;publikuar, publiku sheh &quot;Së shpejti&quot; dhe regjistrimi çaktivizohet.
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <Switch
                                                 name="is_published"
                                                 defaultChecked={!!conference.is_published}
                                                 aria-label="Ndrysho statusin Publikuar"
-                                                className="h-9 w-16 min-w-[64px] border-2 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-700 data-[state=unchecked]:bg-slate-200 data-[state=unchecked]:border-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-400"
+                                                className="peer h-10 w-16 min-w-[64px] rounded-full border-2 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-700 data-[state=unchecked]:bg-slate-200 data-[state=unchecked]:border-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-400"
                                             />
-                                            <div className="text-xs font-semibold">
-                                                <span className="hidden text-green-700 peer-data-[state=checked]:inline">PO / ON</span>
-                                                <span className="inline text-slate-700 peer-data-[state=checked]:hidden">JO / OFF</span>
+                                            <div className="flex items-center gap-1 text-xs font-semibold min-w-[84px]">
+                                                <span className="hidden rounded-full bg-green-100 px-2 py-0.5 text-green-700 ring-1 ring-green-200 peer-data-[state=checked]:inline">PO</span>
+                                                <span className="inline rounded-full bg-slate-200 px-2 py-0.5 text-slate-700 ring-1 ring-slate-300 peer-data-[state=checked]:hidden">JO</span>
+                                                <span className="hidden text-green-700 peer-data-[state=checked]:inline">/ ON</span>
+                                                <span className="inline text-slate-700 peer-data-[state=checked]:hidden">/ OFF</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
                                         <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <Label className="text-base font-semibold">Regjistrimi i hapur</Label>
-                                                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${conference.registration_open ? "bg-green-100 text-green-700 ring-1 ring-green-200" : "bg-slate-200 text-slate-700 ring-1 ring-slate-300"}`}>
-                                                    {conference.registration_open ? "PO" : "JO"}
-                                                </span>
-                                            </div>
+                                            <Label className="text-base font-semibold">Regjistrimi i hapur</Label>
                                             <p className="text-xs text-muted-foreground">
                                                 Ky status vetëm shfaq një njoftim publik; formulari i regjistrimit mbetet aktiv.
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <Switch
                                                 name="registration_open"
                                                 defaultChecked={!!conference.registration_open}
                                                 aria-label="Ndrysho statusin Regjistrimi i hapur"
-                                                className="h-9 w-16 min-w-[64px] border-2 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-700 data-[state=unchecked]:bg-slate-200 data-[state=unchecked]:border-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-400"
+                                                className="peer h-10 w-16 min-w-[64px] rounded-full border-2 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-700 data-[state=unchecked]:bg-slate-200 data-[state=unchecked]:border-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-400"
                                             />
-                                            <div className="text-xs font-semibold">
-                                                <span className="hidden text-green-700 peer-data-[state=checked]:inline">PO / ON</span>
-                                                <span className="inline text-slate-700 peer-data-[state=checked]:hidden">JO / OFF</span>
+                                            <div className="flex items-center gap-1 text-xs font-semibold min-w-[84px]">
+                                                <span className="hidden rounded-full bg-green-100 px-2 py-0.5 text-green-700 ring-1 ring-green-200 peer-data-[state=checked]:inline">PO</span>
+                                                <span className="inline rounded-full bg-slate-200 px-2 py-0.5 text-slate-700 ring-1 ring-slate-300 peer-data-[state=checked]:hidden">JO</span>
+                                                <span className="hidden text-green-700 peer-data-[state=checked]:inline">/ ON</span>
+                                                <span className="inline text-slate-700 peer-data-[state=checked]:hidden">/ OFF</span>
                                             </div>
                                         </div>
                                     </div>
