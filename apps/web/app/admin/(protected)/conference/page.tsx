@@ -15,6 +15,36 @@ import { AgendaEditor } from "./AgendaEditor";
 
 export const dynamic = "force-dynamic";
 
+interface StatusToggleCardProps {
+    label: string;
+    description: string;
+    name: string;
+    defaultChecked: boolean;
+}
+
+function StatusToggleCard({ label, description, name, defaultChecked }: StatusToggleCardProps) {
+    return (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
+            <div className="flex-1 min-w-0 space-y-1">
+                <Label className="text-base font-semibold">{label}</Label>
+                <p className="text-xs text-muted-foreground">{description}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+                <Switch
+                    name={name}
+                    defaultChecked={defaultChecked}
+                    aria-label={`Ndrysho statusin ${label}`}
+                    className="peer h-6 w-11 cursor-pointer data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-400"
+                />
+                <span className="min-w-[44px] whitespace-nowrap rounded-full border px-2 py-1 text-center text-xs font-semibold bg-white peer-data-[state=checked]:border-emerald-200 peer-data-[state=checked]:text-emerald-700 peer-data-[state=unchecked]:border-slate-200 peer-data-[state=unchecked]:text-slate-700">
+                    <span className="hidden peer-data-[state=checked]:inline">PO</span>
+                    <span className="inline peer-data-[state=checked]:hidden">JO</span>
+                </span>
+            </div>
+        </div>
+    );
+}
+
 export default async function ConferencePage({ searchParams }: { searchParams?: { error?: string } }) {
     const conference = await getConferenceBySlug(CONFERENCE_SLUG);
     const errorCode = searchParams?.error;
@@ -222,50 +252,18 @@ export default async function ConferencePage({ searchParams }: { searchParams?: 
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
-                                        <div className="space-y-1">
-                                            <Label className="text-base font-semibold">Publikuar</Label>
-                                            <p className="text-xs text-muted-foreground">
-                                                Kur është e ç&apos;publikuar, publiku sheh &quot;Së shpejti&quot; dhe regjistrimi çaktivizohet.
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Switch
-                                                name="is_published"
-                                                defaultChecked={!!conference.is_published}
-                                                aria-label="Ndrysho statusin Publikuar"
-                                                className="peer h-10 w-16 min-w-[64px] rounded-full border-2 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-700 data-[state=unchecked]:bg-slate-200 data-[state=unchecked]:border-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-400"
-                                            />
-                                            <div className="flex items-center gap-1 text-xs font-semibold min-w-[84px]">
-                                                <span className="hidden rounded-full bg-green-100 px-2 py-0.5 text-green-700 ring-1 ring-green-200 peer-data-[state=checked]:inline">PO</span>
-                                                <span className="inline rounded-full bg-slate-200 px-2 py-0.5 text-slate-700 ring-1 ring-slate-300 peer-data-[state=checked]:hidden">JO</span>
-                                                <span className="hidden text-green-700 peer-data-[state=checked]:inline">/ ON</span>
-                                                <span className="inline text-slate-700 peer-data-[state=checked]:hidden">/ OFF</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
-                                        <div className="space-y-1">
-                                            <Label className="text-base font-semibold">Regjistrimi i hapur</Label>
-                                            <p className="text-xs text-muted-foreground">
-                                                Ky status vetëm shfaq një njoftim publik; formulari i regjistrimit mbetet aktiv.
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Switch
-                                                name="registration_open"
-                                                defaultChecked={!!conference.registration_open}
-                                                aria-label="Ndrysho statusin Regjistrimi i hapur"
-                                                className="peer h-10 w-16 min-w-[64px] rounded-full border-2 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-700 data-[state=unchecked]:bg-slate-200 data-[state=unchecked]:border-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-400"
-                                            />
-                                            <div className="flex items-center gap-1 text-xs font-semibold min-w-[84px]">
-                                                <span className="hidden rounded-full bg-green-100 px-2 py-0.5 text-green-700 ring-1 ring-green-200 peer-data-[state=checked]:inline">PO</span>
-                                                <span className="inline rounded-full bg-slate-200 px-2 py-0.5 text-slate-700 ring-1 ring-slate-300 peer-data-[state=checked]:hidden">JO</span>
-                                                <span className="hidden text-green-700 peer-data-[state=checked]:inline">/ ON</span>
-                                                <span className="inline text-slate-700 peer-data-[state=checked]:hidden">/ OFF</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <StatusToggleCard
+                                        label="Publikuar"
+                                        description='Kur është e ç&apos;publikuar, publiku sheh &quot;Së shpejti&quot; dhe regjistrimi çaktivizohet.'
+                                        name="is_published"
+                                        defaultChecked={!!conference.is_published}
+                                    />
+                                    <StatusToggleCard
+                                        label="Regjistrimi i hapur"
+                                        description="Ky status vetëm shfaq një njoftim publik; formulari i regjistrimit mbetet aktiv."
+                                        name="registration_open"
+                                        defaultChecked={!!conference.registration_open}
+                                    />
                                 </div>
                                 <Button type="submit" className="w-full" size="lg">Ruaj Ndryshimet</Button>
                             </CardContent>
