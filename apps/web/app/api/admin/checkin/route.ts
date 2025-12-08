@@ -45,6 +45,8 @@ export async function POST(req: NextRequest) {
         .from("registrations")
         .select("id, full_name, category, checked_in, checked_in_at, conference_id")
         .eq("id", payload.sub)
+        .eq("is_spam", false)
+        .eq("archived", false)
         .maybeSingle();
 
       if (fetchError || !registration) {

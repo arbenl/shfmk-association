@@ -16,23 +16,27 @@ import Link from "next/link";
 import { AdminResendButton } from "./AdminResendButton";
 import { ExportButton } from "./ExportButton";
 import { BulkResendButton } from "./BulkResendButton";
+import { AdminSpamButtons } from "./AdminSpamButtons";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminRegistrations({
   searchParams,
 }: {
-  searchParams: { q?: string; category?: string; status?: string };
+  searchParams: { q?: string; category?: string; status?: string; filter?: string };
 }) {
   const conference = await getConferenceBySlug();
   if (!conference) {
     return <div>Konferenca nuk u gjet</div>;
   }
 
+  const visibility = (searchParams.filter as "active" | "spam" | "archived" | "all" | undefined) ?? "active";
+
   const registrations = await listRegistrations({
     conferenceId: conference.id,
     search: searchParams.q,
     emailStatus: searchParams.status,
+    visibility,
     limit: 1000, // Reasonable limit for now
   });
 
@@ -156,6 +160,8 @@ export default async function AdminRegistrations({
         <FilterPill label="Dërguar" href="/admin/registrations?status=sent" active={searchParams.status === "sent"} />
         <FilterPill label="Në pritje" href="/admin/registrations?status=pending" active={searchParams.status === "pending"} />
         <FilterPill label="Dështuar/Bounce" href="/admin/registrations?status=failed" active={searchParams.status === "failed"} />
+        <FilterPill label="Spam" href="/admin/registrations?filter=spam" active={searchParams.filter === "spam"} />
+        <FilterPill label="Arkivuar" href="/admin/registrations?filter=archived" active={searchParams.filter === "archived"} />
       </div>
 
       <div className="rounded-md border bg-white">
@@ -164,14 +170,15 @@ export default async function AdminRegistrations({
             <TableRow>
               <TableHead>Emri</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Kategoria</TableHead>
-              <TableHead>Pjesëmarrja</TableHead>
-              <TableHead>Pikë</TableHead>
-              <TableHead>Pagesa</TableHead>
-              <TableHead>Regjistruar</TableHead>
-              <TableHead>Status Email</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead className="text-right">Veprime</TableHead>
+            <TableHead>Kategoria</TableHead>
+            <TableHead>Pjesëmarrja</TableHead>
+            <TableHead>Pikë</TableHead>
+            <TableHead>Pagesa</TableHead>
+            <TableHead>Regjistruar</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Status Email</TableHead>
+            <TableHead>Check-in</TableHead>
+            <TableHead className="text-right">Veprime</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,19 +204,27 @@ export default async function AdminRegistrations({
                   <TableCell>{reg.points}</TableCell>
                   <TableCell>{reg.fee_amount} {reg.currency}</TableCell>
                   <TableCell>{new Date(reg.created_at).toLocaleDateString('sq-AL')}</TableCell>
-                  <TableCell>
-                    <EmailStatusBadge status={reg.email_status} />
-                  </TableCell>
-                  <TableCell>
-                    {reg.checked_in ? (
-                      <Badge className="bg-green-600">PO</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <AdminResendButton registrationId={reg.id} />
-                  </TableCell>
+              <TableCell>
+                {reg.is_spam && <Badge className="bg-red-600">Spam</Badge>}
+                {reg.archived && <Badge variant="outline">Arkivuar</Badge>}
+                {!reg.is_spam && !reg.archived && <Badge variant="outline">Aktiv</Badge>}
+              </TableCell>
+              <TableCell>
+                <EmailStatusBadge status={reg.email_status} />
+              </TableCell>
+              <TableCell>
+                {reg.checked_in ? (
+                  <Badge className="bg-green-600">PO</Badge>
+                ) : (
+                  <span className="text-muted-foreground text-sm">-</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex flex-col gap-2 items-end">
+                  <AdminResendButton registrationId={reg.id} />
+                  <AdminSpamButtons registrationId={reg.id} isSpam={reg.is_spam} archived={reg.archived} />
+                </div>
+              </TableCell>
                 </TableRow>
               ))
             )}

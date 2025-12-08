@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -11,12 +11,25 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ResendButton } from "./success/ResendButton";
 
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (element: HTMLElement, options: Record<string, any>) => void;
+      reset?: (id?: string) => void;
+    };
+  }
+}
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
 const schema = z.object({
-  fullName: z.string().min(1, "Emri i plotë është i detyrueshëm"),
-  email: z.string().email("Email-i nuk është i vlefshëm"),
+  fullName: z.string().min(2, "Emri i plotë është i detyrueshëm").max(80, "Emri është shumë i gjatë"),
+  email: z.string().email("Email-i nuk është i vlefshëm").max(320, "Email-i është shumë i gjatë"),
   phone: z.string().optional(),
   institution: z.string().optional(),
   category: z.enum(["farmacist", "teknik"]),
+  turnstileToken: z.string().min(1, "Verifikimi i sigurisë kërkohet"),
+  website: z.string().optional(),
 });
 
 type State = {
@@ -32,6 +45,7 @@ type State = {
 
 export default function RegisterFormClient() {
   const router = useRouter();
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const handleSubmit = async (prevState: State, formData: FormData): Promise<State> => {
     const validatedFields = schema.safeParse({
@@ -40,6 +54,8 @@ export default function RegisterFormClient() {
       phone: formData.get("phone"),
       institution: formData.get("institution"),
       category: formData.get("category"),
+      turnstileToken: formData.get("turnstileToken"),
+      website: formData.get("website"),
     });
 
     if (!validatedFields.success) {
@@ -131,6 +147,17 @@ export default function RegisterFormClient() {
                 </SelectContent>
               </Select>
             </div>
+            <input type="hidden" name="turnstileToken" value={turnstileToken} />
+            <div className="hidden" aria-hidden>
+              <Label htmlFor="website">Faqja e kompanisë</Label>
+              <Input id="website" name="website" autoComplete="off" tabIndex={-1} />
+            </div>
+            <TurnstileField onToken={setTurnstileToken} />
+            {!turnstileSiteKey && (
+              <p className="text-sm text-red-600">
+                Konfigurimi i Turnstile mungon. Regjistrimi është i çaktivizuar për siguri.
+              </p>
+            )}
             <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
               <p className="font-semibold">Pikët OFK</p>
               <p>Pikët: 12 (Pjesëmarrës pasiv) / 15 (Pjesëmarrës aktiv)</p>
@@ -143,7 +170,7 @@ export default function RegisterFormClient() {
                 <AlreadyRegistered registrationId={state.registrationId} />
               </Suspense>
             )}
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={!turnstileSiteKey}>
               Regjistrohu & Merr QR Kodin
             </Button>
           </form>
@@ -165,4 +192,43 @@ function AlreadyRegistered({ registrationId }: { registrationId: string }) {
       </Button>
     </div>
   );
+}
+
+function TurnstileField({ onToken }: { onToken: (token: string) => void }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!turnstileSiteKey || !containerRef.current) return;
+
+    const renderWidget = () => {
+      if (!window.turnstile || !containerRef.current) return;
+      window.turnstile.render(containerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token: string) => onToken(token),
+        "expired-callback": () => onToken(""),
+        "error-callback": () => onToken(""),
+      });
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+      return;
+    }
+
+    const scriptId = "cf-turnstile-script";
+    if (document.getElementById(scriptId)) {
+      document.getElementById(scriptId)?.addEventListener("load", renderWidget, { once: true } as any);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.defer = true;
+    script.onload = renderWidget;
+    document.body.appendChild(script);
+  }, [onToken]);
+
+  return <div className="mt-2" ref={containerRef} />;
 }

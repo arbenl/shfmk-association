@@ -208,7 +208,27 @@ export interface RegistrationRow {
   resend_last_at: string | null;
   resend_count: number;
   created_at: string;
+  is_spam: boolean;
+  archived: boolean;
+  spam_reason: string | null;
 }
+
+export type RegistrationDisplay = Pick<
+  RegistrationRow,
+  | "id"
+  | "full_name"
+  | "category"
+  | "participation_type"
+  | "points"
+  | "fee_amount"
+  | "currency"
+  | "qr_token"
+  | "checked_in"
+  | "checked_in_at"
+  | "email_status"
+  | "is_spam"
+  | "archived"
+>;
 
 // --- Database Functions ---
 
@@ -221,6 +241,8 @@ export async function getRegistrationByEmail(email: string, conferenceId: string
     .select("*")
     .eq("email", normalizedEmail)
     .eq("conference_id", conferenceId)
+    .eq("is_spam", false)
+    .eq("archived", false)
     .maybeSingle();
 
   if (error) {
@@ -311,7 +333,9 @@ export async function countRegistrations(conferenceId: string): Promise<number> 
   const { count, error } = await client
     .from("registrations")
     .select("*", { head: true, count: "exact" })
-    .eq("conference_id", conferenceId);
+    .eq("conference_id", conferenceId)
+    .eq("is_spam", false)
+    .eq("archived", false);
 
   if (error) {
     throw new Error(`Failed to count registrations: ${error.message}`);
@@ -346,6 +370,27 @@ export async function getRegistrationById(id: string): Promise<RegistrationRow |
 }
 
 
+export async function getRegistrationForDisplay(id: string): Promise<RegistrationDisplay | null> {
+  const client = requireClient();
+  const { data, error } = await client
+    .from("registrations")
+    .select(
+      "id, full_name, category, participation_type, points, fee_amount, currency, qr_token, checked_in, checked_in_at, email_status, is_spam, archived"
+    )
+    .eq("id", id)
+    .eq("is_spam", false)
+    .eq("archived", false)
+    .maybeSingle();
+
+  if (error) {
+    console.error("DB Error in getRegistrationForDisplay:", error);
+    return null;
+  }
+
+  return data as RegistrationDisplay | null;
+}
+
+
 
 export async function listRegistrations(params: {
 
@@ -357,29 +402,21 @@ export async function listRegistrations(params: {
 
   limit?: number;
 
+  visibility?: "active" | "spam" | "archived" | "all";
 }): Promise<RegistrationRow[]> {
 
   const client = requireClient();
 
   let query = client
-
     .from("registrations")
-
     .select("*")
-
     .eq("conference_id", params.conferenceId)
-
     .order("created_at", { ascending: false });
 
-
-
   if (params.search) {
-
     const term = `%${params.search}%`;
     query = query.or(`full_name.ilike.${term},email.ilike.${term}`);
-
   }
-
 
   if (params.emailStatus) {
     if (params.emailStatus === "failed") {
@@ -389,22 +426,23 @@ export async function listRegistrations(params: {
     }
   }
 
-
-
-  if (params.limit) {
-
-    query = query.limit(params.limit);
-
+  const visibility = params.visibility ?? "active";
+  if (visibility === "active") {
+    query = query.eq("is_spam", false).eq("archived", false);
+  } else if (visibility === "spam") {
+    query = query.eq("is_spam", true);
+  } else if (visibility === "archived") {
+    query = query.eq("archived", true);
   }
 
-
+  if (params.limit) {
+    query = query.limit(params.limit);
+  }
 
   const { data, error } = await query;
 
   if (error) {
-
     throw new Error(`Failed to list registrations: ${error.message}`);
-
   }
 
   return (data as RegistrationRow[]) ?? [];

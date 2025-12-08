@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   const search = url.searchParams.get("q") ?? undefined;
   const slug = url.searchParams.get("conf") ?? CONFERENCE_SLUG;
   const format = url.searchParams.get("format") ?? "json";
+  const filter = (url.searchParams.get("filter") ?? "active") as "active" | "spam" | "archived" | "all";
 
   const conference = await getConferenceBySlug(slug);
   if (!conference) {
@@ -15,7 +16,8 @@ export async function GET(req: NextRequest) {
 
   const registrations = await listRegistrations({
     conferenceId: conference.id,
-    search
+    search,
+    visibility: filter,
   });
 
   if (format === "csv") {

@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { CONFERENCE_SLUG, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
-import type { Conference, RegistrationRow, SiteSettings } from "@/lib/supabase";
+import type { Conference, SiteSettings } from "@/lib/supabase";
 
 const publicClient =
   SUPABASE_URL && SUPABASE_ANON_KEY
@@ -50,22 +50,6 @@ export async function getPublishedConferenceBySlug(slug: string = CONFERENCE_SLU
   }
 
   return data as Conference | null;
-}
-
-export async function getPublicRegistrationById(id: string): Promise<RegistrationRow | null> {
-  const client = requirePublicClient();
-  const { data, error } = await client
-    .from("registrations")
-    .select("id, full_name, email, category, participation_type, points, fee_amount, currency, qr_token, checked_in, checked_in_at")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    console.error("DB Error in getPublicRegistrationById:", error);
-    return null;
-  }
-
-  return data as RegistrationRow | null;
 }
 
 export async function getPublicConference(slug: string = CONFERENCE_SLUG): Promise<{

@@ -9,24 +9,76 @@ import {
   getRegistrationByEmail,
 } from "@/lib/supabase";
 import { RegistrationTokenPayload, signRegistrationToken } from "@shfmk/shared";
-import { QR_PRIVATE_KEY_PEM, ensureServerEnv } from "@/lib/env";
+import { QR_PRIVATE_KEY_PEM, TURNSTILE_SECRET_KEY, ensureServerEnv } from "@/lib/env";
 import { dispatchConfirmationEmail } from "@/lib/email/delivery";
+import { enforceRegistrationRateLimit } from "@/lib/rate-limit";
 
 // Schema for validating the request body
 const inputSchema = z.object({
-  fullName: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email"),
+  fullName: z
+    .string()
+    .min(2, "Name is required")
+    .max(80, "Name too long")
+    .refine((val) => !/^[A-Za-z0-9]{18,}$/.test(val.replace(/\s+/g, "")), {
+      message: "Emri duket i pavlefshëm.",
+    }),
+  email: z
+    .string()
+    .email("Invalid email")
+    .max(320, "Email is too long")
+    .transform((v) => v.trim().toLowerCase()),
   phone: z.string().optional(),
   institution: z.string().optional(),
   category: z.enum(["farmacist", "teknik"]),
+  turnstileToken: z.string().min(10, "Verification required"),
+  website: z.string().optional(), // honeypot
 });
+
+function getClientIp(req: NextRequest) {
+  return req.ip ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+}
+
+async function verifyTurnstile(token: string, ip: string | null) {
+  if (!TURNSTILE_SECRET_KEY) {
+    throw new Error("Turnstile secret key missing");
+  }
+
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      secret: TURNSTILE_SECRET_KEY,
+      response: token,
+      remoteip: ip ?? "",
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Turnstile verification failed");
+  }
+
+  const data = (await res.json()) as { success?: boolean };
+  return data.success === true;
+}
 
 export async function POST(req: NextRequest) {
   try {
     // 1. Validate environment and request body (allow registration even if email env missing)
-    ensureServerEnv({ requireEmailEnv: false });
+    ensureServerEnv({ requireEmailEnv: false, requireTurnstile: true });
     const body = await req.json();
     const input = inputSchema.parse(body);
+    const ip = getClientIp(req);
+
+    if (input.website && input.website.trim().length > 0) {
+      return NextResponse.json({ ok: false, error: "Regjistrimi dështoi", code: "INVALID_INPUT" }, { status: 400 });
+    }
+
+    enforceRegistrationRateLimit(ip, input.email);
+
+    const turnstileOk = await verifyTurnstile(input.turnstileToken, ip);
+    if (!turnstileOk) {
+      return NextResponse.json({ ok: false, error: "Verifikimi dështoi", code: "BOT_DETECTED" }, { status: 400 });
+    }
 
     // 2. Get conference details
     const conference = await getConferenceBySlug();
@@ -39,6 +91,13 @@ export async function POST(req: NextRequest) {
     let registration = existingRegistration;
     let token = registration?.qr_token;
     let createdNew = false;
+
+    if (registration?.is_spam || registration?.archived) {
+      return NextResponse.json(
+        { ok: false, error: "Ky regjistrim është bllokuar. Ju lutemi kontaktoni organizatorët.", code: "BLOCKED" },
+        { status: 403 }
+      );
+    }
 
     if (!registration) {
       ensureRegistrationIsOpen(conference);
@@ -77,7 +136,7 @@ export async function POST(req: NextRequest) {
       registration = await createRegistration({
         id: registrationId,
         conferenceId: conference.id,
-        fullName: input.fullName,
+        fullName: input.fullName.trim(),
         email: input.email,
         phone: input.phone,
         institution: input.institution,
@@ -137,6 +196,11 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({ ok: false, error: error.issues[0]?.message ?? "Të dhëna të pavlefshme", code: "INVALID_INPUT" }, { status: 400 });
+    }
+
+    const typedError = error as { message?: string; status?: number };
+    if (typedError?.status === 429) {
+      return NextResponse.json({ ok: false, error: typedError.message ?? "Shumë kërkesa", code: "RATE_LIMITED" }, { status: 429 });
     }
 
     let message = "Një gabim i papritur ndodhi. Ju lutemi provoni përsëri.";

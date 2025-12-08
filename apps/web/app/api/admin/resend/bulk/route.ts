@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
         results.push({ id, ok: false, error: "not found" });
         continue;
       }
+      if (registration.is_spam || registration.archived) {
+        results.push({ id, ok: false, error: "blocked" });
+        continue;
+      }
       const conference = await getConferenceById(registration.conference_id);
       if (!conference) {
         results.push({ id, ok: false, error: "conference missing" });

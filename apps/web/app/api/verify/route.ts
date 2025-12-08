@@ -45,6 +45,8 @@ async function handleVerify(token?: string) {
       .from("registrations")
       .select("id, full_name, category, checked_in, checked_in_at")
       .eq("id", payload.sub)
+      .eq("is_spam", false)
+      .eq("archived", false)
       .maybeSingle();
 
     if (fetchError || !registration) {

@@ -28,13 +28,16 @@ export const SITE_BASE_URL =
 export const NODE_ENV = process.env.NODE_ENV;
 export const SCANNER_ANDROID_URL = cleanEnv(process.env.SCANNER_ANDROID_URL);
 export const SCANNER_IOS_URL = cleanEnv(process.env.SCANNER_IOS_URL);
+export const TURNSTILE_SITE_KEY = cleanEnv(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+export const TURNSTILE_SECRET_KEY = cleanEnv(process.env.TURNSTILE_SECRET_KEY);
 
 /**
  * Checks that all required server-side environment variables are present.
  * Throws an error if any are missing.
  */
-export function ensureServerEnv(options?: { requireEmailEnv?: boolean }) {
+export function ensureServerEnv(options?: { requireEmailEnv?: boolean; requireTurnstile?: boolean }) {
   const requireEmailEnv = options?.requireEmailEnv ?? true;
+  const requireTurnstile = options?.requireTurnstile ?? false;
   const missing: string[] = [];
   if (!SUPABASE_URL) missing.push("SUPABASE_URL");
   if (!SUPABASE_ANON_KEY) missing.push("SUPABASE_ANON_KEY");
@@ -44,6 +47,10 @@ export function ensureServerEnv(options?: { requireEmailEnv?: boolean }) {
     if (!RESEND_FROM_EMAIL) missing.push("RESEND_FROM_EMAIL");
   }
   if (!ADMIN_SECRET_KEY) missing.push("ADMIN_SECRET_KEY");
+  if (requireTurnstile) {
+    if (!TURNSTILE_SITE_KEY) missing.push("NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+    if (!TURNSTILE_SECRET_KEY) missing.push("TURNSTILE_SECRET_KEY");
+  }
 
   // In production, we strictly require the private key for security.
   // In dev, we can fallback to generated keys (handled in API).

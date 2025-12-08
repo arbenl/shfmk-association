@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { QR_PRIVATE_KEY_PEM } from "@/lib/env";
-import { getPublicRegistrationById } from "@/lib/supabase/public";
+import { getRegistrationForDisplay } from "@/lib/supabase";
 
 import { createPublicKey } from "crypto";
 
@@ -59,7 +59,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
         const publicKey = await getPublicKey();
         const payload = await verifyRegistrationToken(token, publicKey);
 
-        const registration = await getPublicRegistrationById(payload.sub);
+        const registration = await getRegistrationForDisplay(payload.sub);
 
         if (!registration) {
             console.error("[VERIFY] Registration fetch error: registration not found");

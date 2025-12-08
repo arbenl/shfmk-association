@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     if (!registration) {
       return NextResponse.json({ ok: false, error: "Registration not found" }, { status: 404 });
     }
+    if (registration.is_spam || registration.archived) {
+      return NextResponse.json({ ok: false, error: "Regjistrimi është i bllokuar", code: "BLOCKED" }, { status: 403 });
+    }
 
     // 3. Fetch Conference
     const conference = await getConferenceById(registration.conference_id);
