@@ -204,87 +204,123 @@ export default function ScannerClient() {
   };
 
   const statusColors: Record<StatusKind, string> = {
-    success: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    info: "bg-blue-50 text-blue-800 border-blue-200",
-    error: "bg-red-50 text-red-800 border-red-200",
+    success: "bg-emerald-600 text-white",
+    info: "bg-blue-600 text-white",
+    error: "bg-red-600 text-white",
+  };
+
+  const handleRetry = async () => {
+    await stopScanner();
+    setStatus(null);
+    if (step === "scan" && pin) {
+      void startScanner();
+    }
   };
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Scanner për Vullnetarët</h1>
-          <p className="text-sm text-muted-foreground">
-            Hyni me PIN dhe skanoni biletat me kamerën e telefonit.
-          </p>
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-6 sm:py-10">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-blue-600">SHFK</p>
+            <h1 className="text-2xl font-bold sm:text-3xl">Scanner për Vullnetarët</h1>
+            <p className="text-sm text-muted-foreground">
+              Hyni me PIN dhe skanoni biletat me kamerën e telefonit.
+            </p>
+          </div>
+          {pin && (
+            <Badge variant="secondary" className="text-xs">
+              PIN aktiv
+            </Badge>
+          )}
         </div>
-        {pin && (
-          <Badge variant="secondary" className="text-xs">
-            PIN aktiv
-          </Badge>
+
+        {status && (
+          <div className={`mb-4 rounded-lg px-4 py-3 text-sm text-center font-semibold shadow ${statusColors[status.kind]}`}>
+            <p>{status.message}</p>
+            {status.details && <p className="mt-1 text-xs opacity-90">{status.details}</p>}
+          </div>
         )}
-      </div>
 
-      {status && (
-        <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${statusColors[status.kind]}`}>
-          <p className="font-semibold">{status.message}</p>
-          {status.details && <p className="mt-1 text-xs opacity-80">{status.details}</p>}
-        </div>
-      )}
+        {step === "pin" && (
+          <div className="flex flex-1 items-center justify-center py-8">
+            <Card className="w-full max-w-lg shadow-md">
+              <CardHeader className="space-y-2 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">1. Shkruaj PIN-in</p>
+                <CardTitle className="text-2xl">Hyrja e vullnetarit</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Ky ekran është vetëm për vullnetarët e autorizuar.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <form className="space-y-5" onSubmit={onSubmitPin}>
+                  <div className="space-y-2">
+                    <label className="text-base font-semibold text-slate-800" htmlFor="pin">
+                      PIN i vullnetarit (x-admin-key)
+                    </label>
+                    <Input
+                      id="pin"
+                      type="password"
+                      autoComplete="off"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      placeholder="Shkruani PIN"
+                      required
+                      className="h-12 text-base"
+                    />
+                  </div>
+                  <Button type="submit" className="h-12 w-full text-base">
+                    Vazhdo te skanimi
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-      {step === "pin" && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Vendos PIN-in për skanim</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={onSubmitPin}>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="pin">
-                  PIN i vullnetarit (x-admin-key)
-                </label>
-                <Input
-                  id="pin"
-                  type="password"
-                  autoComplete="off"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="Shkruani PIN"
-                  required
-                />
+        {step === "scan" && (
+          <div className="flex flex-1 flex-col gap-4 pb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">2. Skanoni biletën</p>
+                <p className="text-sm text-muted-foreground">Vendosni QR-në në qendër të kamerës.</p>
               </div>
-              <Button type="submit" className="w-full">
-                Vazhdo te skanimi
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+              <Badge variant="outline" className="text-xs">
+                PIN aktiv
+              </Badge>
+            </div>
 
-      {step === "scan" && (
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Skanimi i biletave</CardTitle>
-            <Button variant="outline" size="sm" onClick={onLogout}>
-              Ndrysho PIN
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border bg-slate-50 p-3">
-              <p className="text-sm text-muted-foreground">
-                Poziciononi QR përpara kamerës. Rezultati do të shfaqet automatikisht.
-              </p>
+            <div className="rounded-xl bg-black shadow-sm">
+              <div
+                id={readerId}
+                className="aspect-[3/4] w-full overflow-hidden rounded-xl sm:aspect-[4/3]"
+              >
+                {isStarting && (
+                  <div className="flex h-full items-center justify-center text-sm text-white/80">
+                    Duke hapur kamerën...
+                  </div>
+                )}
+              </div>
             </div>
-            <div
-              id={readerId}
-              className="aspect-square w-full max-w-md mx-auto rounded-lg border border-dashed border-slate-300 bg-black/5"
-            >
-              {isStarting && (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Duke hapur kamerën...
-                </div>
-              )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button variant="outline" className="h-12 w-full text-base" onClick={onLogout}>
+                Ndrysho PIN
+              </Button>
+              <Button variant="secondary" className="h-12 w-full text-base" onClick={() => void handleRetry()}>
+                Rifresko skanimin
+              </Button>
             </div>
+
+            <Card className="border-dashed border-slate-200">
+              <CardContent className="space-y-2 py-4 text-sm text-slate-700">
+                <p className="font-semibold">Këshilla:</p>
+                <p className="text-muted-foreground">
+                  Mbajeni kamerën të qëndrueshme dhe sigurohuni që QR të jetë plotësisht brenda kornizës.
+                </p>
+              </CardContent>
+            </Card>
+
             {isDev && (
               <div className="flex justify-end">
                 <Button
@@ -297,26 +333,26 @@ export default function ScannerClient() {
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        <Card className="mt-auto">
+          <CardHeader>
+            <CardTitle>Udhëzues i Shpejtë</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-slate-700">
+            <p>1) Hyni me PIN-in që ju ka dhënë koordinatori.</p>
+            <p>2) Jepni leje kamerës kur kërkohet.</p>
+            <p>3) Skanoni QR nga email/PDF i pjesëmarrësit.</p>
+            <p>4) Statuset e mundshme:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>✅ Check-in u krye</li>
+              <li>ℹ️ Pjesëmarrësi është check-in më herët</li>
+              <li>❌ Bileta e pavlefshme ose PIN gabim</li>
+            </ul>
           </CardContent>
         </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Udhëzues i Shpejtë</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-slate-700">
-          <p>1) Hyni me PIN-in që ju ka dhënë koordinatori.</p>
-          <p>2) Jepni leje kamerës kur kërkohet.</p>
-          <p>3) Skanoni QR nga email/PDF i pjesëmarrësit.</p>
-          <p>4) Statuset e mundshme:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>✅ Check-in u krye</li>
-            <li>ℹ️ Pjesëmarrësi është check-in më herët</li>
-            <li>❌ Bileta e pavlefshme ose PIN gabim</li>
-          </ul>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
