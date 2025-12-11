@@ -167,14 +167,15 @@ export default async function AdminRegistrations({
               <TableHead>Kategoria</TableHead>
               <TableHead>Pjesëmarrja</TableHead>
               <TableHead>Pikë</TableHead>
-              <TableHead>Pagesa</TableHead>
-              <TableHead>Regjistruar</TableHead>
-              <TableHead>Status Email</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead className="text-right">Veprime</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+            <TableHead>Pagesa</TableHead>
+            <TableHead>Regjistruar</TableHead>
+            <TableHead>Status Email</TableHead>
+            <TableHead>Spam</TableHead>
+            <TableHead>Check-in</TableHead>
+            <TableHead className="text-right">Veprime</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
             {registrations.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
@@ -199,6 +200,13 @@ export default async function AdminRegistrations({
                   <TableCell>{new Date(reg.created_at).toLocaleDateString('sq-AL')}</TableCell>
                   <TableCell>
                     <EmailStatusBadge status={reg.email_status} />
+                  </TableCell>
+                  <TableCell>
+                    {reg.is_spam ? (
+                      <Badge className="bg-red-600">Spam</Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {reg.checked_in ? (
