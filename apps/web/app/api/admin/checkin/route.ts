@@ -41,48 +41,51 @@ export async function POST(req: NextRequest) {
         auth: { autoRefreshToken: false, persistSession: false },
       });
 
-      const { data: registration, error: fetchError } = await supabase
+      // Atomic update: try to mark as checked in only if not already.
+      const { data: updatedRows, error: updateAttemptError } = await supabase
+        .from("registrations")
+        .update({
+          checked_in: true,
+          checked_in_at: body.scannedAt || new Date().toISOString(),
+        })
+        .eq("id", payload.sub)
+        .is("checked_in_at", null)
+        .select("id, full_name, category, checked_in, checked_in_at, conference_id");
+
+      if (updateAttemptError) {
+        return NextResponse.json({ error: updateAttemptError.message }, { status: 400 });
+      }
+
+      const firstTimeRow = Array.isArray(updatedRows) && updatedRows.length > 0 ? updatedRows[0] : null;
+
+      // If no row updated, fetch existing registration to return context and see if it exists.
+      const { data: existingRegistration, error: fetchExistingError } = await supabase
         .from("registrations")
         .select("id, full_name, category, checked_in, checked_in_at, conference_id")
         .eq("id", payload.sub)
         .maybeSingle();
 
-      if (fetchError || !registration) {
+      if (fetchExistingError || !existingRegistration) {
         return NextResponse.json({ error: "Regjistrimi nuk u gjet" }, { status: 404 });
       }
 
-      const alreadyCheckedIn = registration.checked_in;
-      let checkedInAt = registration.checked_in_at;
-      if (!alreadyCheckedIn) {
-        const { data: updated, error: updateError } = await supabase
-          .from("registrations")
-          .update({
-            checked_in: true,
-            checked_in_at: body.scannedAt || new Date().toISOString(),
-          })
-          .eq("id", registration.id)
-          .select("checked_in_at")
-          .maybeSingle();
-
-        if (updateError) {
-          throw new Error(updateError.message);
-        }
-        checkedInAt = updated?.checked_in_at ?? checkedInAt ?? new Date().toISOString();
-      }
-
+      const effectiveRegistration = firstTimeRow ?? existingRegistration;
+      const wasFirstCheckIn = Boolean(firstTimeRow);
+      const alreadyCheckedIn = !wasFirstCheckIn;
+      const checkedInAt = effectiveRegistration.checked_in_at ?? new Date().toISOString();
       const { data: conference } = await supabase
         .from("conferences")
         .select("name")
-        .eq("id", registration.conference_id)
+        .eq("id", effectiveRegistration.conference_id)
         .maybeSingle();
 
       return NextResponse.json({
         ok: true,
-        status: alreadyCheckedIn ? "already_checked_in" : "checked_in",
+        status: wasFirstCheckIn ? "checked_in" : "already_checked",
         alreadyCheckedIn,
-        registrationId: registration.id,
-        fullName: registration.full_name,
-        category: registration.category,
+        registrationId: effectiveRegistration.id,
+        fullName: effectiveRegistration.full_name,
+        category: effectiveRegistration.category,
         conferenceName: conference?.name ?? "",
         checkedInAt,
       });

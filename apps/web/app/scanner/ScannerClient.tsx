@@ -104,7 +104,7 @@ export default function ScannerClient() {
         if (response.ok && data?.status === "checked_in") {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
           setResult({ kind: "success", message: "Check-in u krye", details });
-        } else if (response.ok && (data?.status === "already_checked_in" || data?.alreadyCheckedIn)) {
+        } else if (response.ok && (data?.status === "already_checked" || data?.status === "already_checked_in" || data?.alreadyCheckedIn)) {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
           setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët", details });
         } else if (response.status === 401) {
