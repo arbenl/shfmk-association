@@ -11,6 +11,7 @@ import {
 import { RegistrationTokenPayload, signRegistrationToken } from "@shfmk/shared";
 import { QR_PRIVATE_KEY_PEM, ensureServerEnv } from "@/lib/env";
 import { dispatchConfirmationEmail } from "@/lib/email/delivery";
+import { isSuspiciousRegistration } from "@/lib/registrationSpamCheck";
 
 // Schema for validating the request body
 const inputSchema = z.object({
@@ -59,6 +60,13 @@ export async function POST(req: NextRequest) {
         cur: conference.currency
       };
 
+      const isSpam = isSuspiciousRegistration({
+        full_name: input.fullName,
+        institution: input.institution,
+        email: input.email,
+        phone: input.phone,
+      });
+
       const { token: generatedToken, generated, publicKeyPem } = await signRegistrationToken(
         payload,
         QR_PRIVATE_KEY_PEM
@@ -87,6 +95,7 @@ export async function POST(req: NextRequest) {
         feeAmount: fee,
         currency: conference.currency,
         qrToken: generatedToken,
+        isSpam,
       });
       createdNew = true;
     }
@@ -106,29 +115,31 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const sendResult = await dispatchConfirmationEmail({
-      registration,
-      conference,
-      type: "initial",
-    });
+    if (!registration.is_spam) {
+      const sendResult = await dispatchConfirmationEmail({
+        registration,
+        conference,
+        type: "initial",
+      });
 
-    if (!sendResult.success) {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: "EMAIL_FAILED",
-          error: sendResult.error ?? "Dërgimi i email-it (me PDF) dështoi.",
-          registrationId: registration.id,
-        },
-        { status: 502 }
-      );
+      if (!sendResult.success) {
+        return NextResponse.json(
+          {
+            ok: false,
+            code: "EMAIL_FAILED",
+            error: sendResult.error ?? "Dërgimi i email-it (me PDF) dështoi.",
+            registrationId: registration.id,
+          },
+          { status: 502 }
+        );
+      }
     }
 
     return NextResponse.json({
       ok: true,
       status: "CREATED",
       registrationId: registration.id,
-      emailSent: true,
+      emailSent: !registration.is_spam,
       code: "CREATED",
     });
 

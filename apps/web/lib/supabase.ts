@@ -201,6 +201,7 @@ export interface RegistrationRow {
   checked_in_at: string | null;
   participation_type: string;
   points: number;
+  is_spam?: boolean | null;
   email_status: string;
   email_attempts: number;
   email_last_error: string | null;
@@ -248,6 +249,7 @@ export async function createRegistration(params: {
   feeAmount: number;
   currency: string;
   qrToken: string; // The pre-generated JWT for the QR code
+  isSpam?: boolean;
 }): Promise<RegistrationRow> {
   const client = requireClient();
   const normalizedEmail = params.email.toLowerCase().trim();
@@ -266,6 +268,7 @@ export async function createRegistration(params: {
       fee_amount: params.feeAmount,
       currency: params.currency,
       qr_token: params.qrToken, // Insert the token directly
+      is_spam: params.isSpam ?? false,
     })
     .select("*")
     .single();
