@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { QR_PRIVATE_KEY_PEM } from "@/lib/env";
-import { getPublicRegistrationById } from "@/lib/supabase/public";
+import { getRegistrationById } from "@/lib/supabase";
 
 import { createPublicKey } from "crypto";
 
@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 interface VerifyPageProps {
     searchParams: {
         token?: string;
+        id?: string;
+        rid?: string;
     };
 }
 
@@ -34,20 +36,21 @@ async function getPublicKey(): Promise<string> {
 
 export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     const token = searchParams.token;
+    const legacyId = searchParams.id ?? searchParams.rid;
 
-    if (!token) {
+    if (!token && !legacyId) {
         return (
             <div className="container mx-auto px-4 py-12">
                 <Card className="mx-auto max-w-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-red-600">
                             <XCircle className="h-6 w-6" />
-                            Token Mungon
+                            Regjistrim i Pavlefshëm
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground">
-                            Nuk u gjet asnjë token për verifikim. Ju lutemi skanoni një kod QR të vlefshëm.
+                            Nuk u gjet asnjë token ose ID për verifikim. Ju lutemi skanoni një kod QR të vlefshëm.
                         </p>
                     </CardContent>
                 </Card>
@@ -56,10 +59,20 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
     }
 
     try {
-        const publicKey = await getPublicKey();
-        const payload = await verifyRegistrationToken(token, publicKey);
+        let registrationId = legacyId;
+        let payload: Awaited<ReturnType<typeof verifyRegistrationToken>> | null = null;
 
-        const registration = await getPublicRegistrationById(payload.sub);
+        if (token) {
+            const publicKey = await getPublicKey();
+            payload = await verifyRegistrationToken(token, publicKey);
+            registrationId = payload.sub;
+        }
+
+        if (!registrationId) {
+            throw new Error("ID e regjistrimit mungon");
+        }
+
+        const registration = await getRegistrationById(registrationId);
 
         if (!registration) {
             console.error("[VERIFY] Registration fetch error: registration not found");
@@ -68,6 +81,9 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
 
         const wasAlreadyCheckedIn = registration.checked_in;
         const finalRegistration = registration;
+        const displayName = payload?.name ?? registration.full_name;
+        const displayCategory = payload?.cat ?? registration.category;
+        const conferenceLabel = payload?.conf ?? "Konferenca";
 
         return (
             <div className="container mx-auto px-4 py-12">
@@ -82,17 +98,17 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-muted-foreground">Emri:</span>
-                                <span className="font-semibold">{payload.name}</span>
+                                <span className="font-semibold">{displayName}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-muted-foreground">Kategoria:</span>
                                 <Badge variant="outline">
-                                    {payload.cat === 'farmacist' ? 'Farmacist' : 'Teknik'}
+                                    {displayCategory === 'farmacist' ? 'Farmacist' : 'Teknik'}
                                 </Badge>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-muted-foreground">Konferenca:</span>
-                                <span className="text-sm">{payload.conf}</span>
+                                <span className="text-sm">{conferenceLabel}</span>
                             </div>
                             {wasAlreadyCheckedIn && finalRegistration.checked_in_at && (
                                 <div className="flex justify-between items-center">
