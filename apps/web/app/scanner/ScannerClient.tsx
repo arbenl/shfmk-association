@@ -42,6 +42,7 @@ export default function ScannerClient() {
   const [mode, setMode] = useState<"pin" | "scan" | "result">("pin");
   const [result, setResult] = useState<ResultState | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const processingRef = useRef(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -84,8 +85,10 @@ export default function ScannerClient() {
 
       if (processingRef.current) return;
       processingRef.current = true;
+      setIsProcessing(true);
 
       try {
+        if (isDev) console.log("[scanner] calling /api/admin/checkin …");
         const response = await fetch("/api/admin/checkin", {
           method: "POST",
           headers: {
@@ -95,36 +98,33 @@ export default function ScannerClient() {
           body: JSON.stringify({ token }),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          const already = data.status === "already_checked_in" || data.alreadyCheckedIn === true;
-          const fullName = data.fullName as string | undefined;
-          const category = data.category as string | undefined;
-          const details = fullName ? `${fullName}${category ? ` • ${category}` : ""}` : undefined;
+        const data = await response.json().catch(() => null);
+        if (isDev) console.log("[scanner] check-in response", response.status, data);
 
-          setResult({
-            kind: already ? "info" : "success",
-            message: already ? "Pjesëmarrësi është check-in më herët" : "Check-in u krye",
-            details,
-          });
-          setMode("result");
+        if (response.ok && data?.status === "checked_in") {
+          const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
+          setResult({ kind: "success", message: "Check-in u krye", details });
+        } else if (response.ok && (data?.status === "already_checked_in" || data?.alreadyCheckedIn)) {
+          const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
+          setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët", details });
         } else if (response.status === 401) {
-          setResult({ kind: "error", message: "PIN i pasaktë. Vendosni përsëri PIN." });
-          setMode("result");
+          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
         } else {
-          setResult({ kind: "error", message: "Bileta e pavlefshme" });
-          setMode("result");
+          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
         }
+        setMode("result");
       } catch (error) {
+        if (isDev) console.error("[scanner] check-in error", error);
         setResult({
           kind: "error",
-          message: "Bileta e pavlefshme",
+          message: "Bileta e pavlefshme ose PIN gabim",
           details: error instanceof Error ? error.message : String(error),
         });
         setMode("result");
       } finally {
         await stopScanner();
         processingRef.current = false;
+        setIsProcessing(false);
       }
     },
     [pin, stopScanner]
@@ -132,6 +132,7 @@ export default function ScannerClient() {
 
   const handleScan = useCallback(
     async (decodedText: string) => {
+      if (isDev) console.log("[scanner] decoded QR:", decodedText);
       const token = extractToken(decodedText);
       if (!token) {
         setResult({ kind: "error", message: "Nuk u gjet token në këtë QR." });
@@ -217,6 +218,8 @@ export default function ScannerClient() {
   const handleRetry = async () => {
     await stopScanner();
     setResult(null);
+    processingRef.current = false;
+    setIsProcessing(false);
     if (pin) {
       setMode("scan");
     } else {
@@ -270,7 +273,7 @@ export default function ScannerClient() {
           <div className="flex items-center justify-between px-4 py-3 text-sm">
             <div className="space-y-1">
               <p className="text-xs uppercase tracking-wide text-blue-300">2. Skanoni biletën</p>
-              <p className="font-semibold">Vendosni QR-në në qendër të kamerës.</p>
+              <p className="font-semibold">{isProcessing ? "Duke verifikuar..." : "Gati për skanim"}</p>
             </div>
             <Badge variant="secondary" className="text-[11px]">
               PIN aktiv
