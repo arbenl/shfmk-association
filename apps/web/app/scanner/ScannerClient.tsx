@@ -114,8 +114,6 @@ export default function ScannerClient() {
         } else if (response.ok && (data?.status === "already_checked" || data?.status === "already_checked_in" || data?.alreadyCheckedIn)) {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
           setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët", details });
-        } else if (response.status === 401) {
-          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
         } else {
           setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
         }
@@ -140,20 +138,28 @@ export default function ScannerClient() {
 
   const handleScan = useCallback(
     async (decodedText: string) => {
-      if (isDev) console.log("[scanner] decoded QR:", decodedText);
-      setLastDecodedText(decodedText);
-      if (processingRef.current) {
-        setLastError("ignored: processing");
-        return;
-      }
-      const token = extractToken(decodedText);
-      if (!token) {
-        setResult({ kind: "error", message: "Nuk u gjet token në këtë QR." });
+      try {
+        if (isDev) console.log("[scanner] decoded QR:", decodedText);
+        setLastDecodedText(decodedText);
+        if (processingRef.current) {
+          setLastError("ignored: processing");
+          return;
+        }
+        const token = extractToken(decodedText);
+        if (!token) {
+          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
+          setLastError("token missing");
+          setMode("result");
+          return;
+        }
+        await handleCheckIn(token);
+      } catch (error) {
+        setLastError(error instanceof Error ? error.message : String(error));
+        setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
         setMode("result");
-        setLastError("token missing");
-        return;
+        processingRef.current = false;
+        setIsProcessing(false);
       }
-      await handleCheckIn(token);
     },
     [handleCheckIn]
   );
