@@ -17,6 +17,7 @@ interface ResultState {
 
 const STORAGE_KEY = "scanner-admin-key";
 const isDev = process.env.NODE_ENV !== "production";
+const DEBUG_SCANNER = process.env.NEXT_PUBLIC_DEBUG_SCANNER === "1";
 
 function extractToken(raw: string): string | null {
   // Try URL with ?token=
@@ -44,6 +45,9 @@ export default function ScannerClient() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [lastDecodedText, setLastDecodedText] = useState<string | null>(null);
+  const [lastCheckinStatus, setLastCheckinStatus] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
   const processingRef = useRef(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const readerId = useMemo(() => "qr-reader-container", []);
@@ -86,6 +90,8 @@ export default function ScannerClient() {
       if (processingRef.current) return;
       processingRef.current = true;
       setIsProcessing(true);
+      setLastCheckinStatus(null);
+      setLastError(null);
 
       try {
         if (isDev) console.log("[scanner] calling /api/admin/checkin …");
@@ -100,6 +106,7 @@ export default function ScannerClient() {
 
         const data = await response.json().catch(() => null);
         if (isDev) console.log("[scanner] check-in response", response.status, data);
+        setLastCheckinStatus(JSON.stringify({ status: data?.status, http: response.status }));
 
         if (response.ok && data?.status === "checked_in") {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
@@ -115,6 +122,7 @@ export default function ScannerClient() {
         setMode("result");
       } catch (error) {
         if (isDev) console.error("[scanner] check-in error", error);
+        setLastError(error instanceof Error ? error.message : String(error));
         setResult({
           kind: "error",
           message: "Bileta e pavlefshme ose PIN gabim",
@@ -133,10 +141,16 @@ export default function ScannerClient() {
   const handleScan = useCallback(
     async (decodedText: string) => {
       if (isDev) console.log("[scanner] decoded QR:", decodedText);
+      setLastDecodedText(decodedText);
+      if (processingRef.current) {
+        setLastError("ignored: processing");
+        return;
+      }
       const token = extractToken(decodedText);
       if (!token) {
         setResult({ kind: "error", message: "Nuk u gjet token në këtë QR." });
         setMode("result");
+        setLastError("token missing");
         return;
       }
       await handleCheckIn(token);
@@ -220,6 +234,8 @@ export default function ScannerClient() {
     setResult(null);
     processingRef.current = false;
     setIsProcessing(false);
+    setLastCheckinStatus(null);
+    setLastError(null);
     if (pin) {
       setMode("scan");
     } else {
@@ -314,6 +330,13 @@ export default function ScannerClient() {
                 >
                   Simulo skanim (dev)
                 </Button>
+              </div>
+            )}
+            {(isDev || DEBUG_SCANNER) && (
+              <div className="mt-3 rounded-lg border border-white/20 bg-white/10 p-3 text-xs space-y-1">
+                <div>lastDecoded: {lastDecodedText ?? "n/a"}</div>
+                <div>lastStatus: {lastCheckinStatus ?? "n/a"}</div>
+                <div>lastError: {lastError ?? "n/a"}</div>
               </div>
             )}
           </div>
