@@ -62,6 +62,15 @@ export default function ScannerClient() {
     }
   }, []);
 
+  // Full-screen mode: hide site chrome while on scanner page
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.classList.add("scanner-fullscreen");
+    return () => {
+      document.body.classList.remove("scanner-fullscreen");
+    };
+  }, []);
+
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
     if (scanner) {

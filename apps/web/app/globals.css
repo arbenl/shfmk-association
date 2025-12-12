@@ -9,7 +9,7 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
@@ -24,4 +24,17 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Scanner full-screen mode: hide site chrome and allow camera to fill viewport */
+body.scanner-fullscreen {
+  background: #000;
+}
+body.scanner-fullscreen header,
+body.scanner-fullscreen footer {
+  display: none !important;
+}
+body.scanner-fullscreen main {
+  min-height: 100vh;
+  padding: 0;
 }
