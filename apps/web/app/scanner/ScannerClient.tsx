@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-type StatusKind = "success" | "info" | "error";
 type Mode = "pin" | "scan" | "result";
 
-interface ResultState {
-  kind: StatusKind;
-  message: string;
-  details?: string;
-}
+type ResultKind = "success" | "already" | "invalid";
+type ResultState = {
+  kind: ResultKind;
+  title: string;
+  subtitle?: string;
+};
 
 const STORAGE_KEY = "scanner-admin-key";
 const isDev = process.env.NODE_ENV !== "production";
@@ -93,20 +93,19 @@ export default function ScannerClient() {
   const mapResponseToResult = (res: Response, data: any): ResultState => {
     const status = data?.status;
     if (res.ok && status === "checked_in") {
-      const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
-      return { kind: "success", message: "Check-in u krye", details };
+      return { kind: "success", title: "Check-in u krye" };
     }
     if (res.ok && (status === "already_checked" || status === "already_checked_in")) {
-      const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
-      return { kind: "info", message: "Pjesëmarrësi është check-in më herët", details };
+      return { kind: "already", title: "Pjesëmarrësi është check-in më herët" };
     }
     if (res.ok && status === "invalid") {
-      return { kind: "error", message: "Bileta e pavlefshme ose PIN gabim" };
+      return { kind: "invalid", title: "Bileta e pavlefshme ose PIN gabim" };
     }
-    if (res.ok && data?.ok === true && !status) {
-      return { kind: "success", message: "Check-in u krye" };
+    // Optional safe fallback: only if API explicitly says ok and includes a registration id marker.
+    if (res.ok && data?.ok === true && (data?.registrationId || data?.sub)) {
+      return { kind: "success", title: "Check-in u krye" };
     }
-    return { kind: "error", message: "Bileta e pavlefshme ose PIN gabim" };
+    return { kind: "invalid", title: "Bileta e pavlefshme ose PIN gabim" };
   };
 
   const handleCheckIn = useCallback(
@@ -125,7 +124,7 @@ export default function ScannerClient() {
       setLastCheckinStatus(JSON.stringify({ status: data?.status, http: response.status }));
 
       const mapped = mapResponseToResult(response, data);
-      if (mapped.kind === "error" && isDev) {
+      if (mapped.kind === "invalid" && isDev) {
         setLastError(`Unexpected payload: ${JSON.stringify(data)}`);
       }
       return mapped;
@@ -156,33 +155,38 @@ export default function ScannerClient() {
       try {
         // Dev simulation shortcuts
         if (DEBUG_SCANNER && decodedText === "dev-valid") {
-          setResult({ kind: "success", message: "Check-in u krye (simuluar)" });
+          setResult({ kind: "success", title: "Check-in u krye (simuluar)" });
           setMode("result");
           return;
         }
         if (DEBUG_SCANNER && decodedText === "dev-repeat") {
-          setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët (simuluar)" });
+          setResult({ kind: "already", title: "Pjesëmarrësi është check-in më herët (simuluar)" });
           setMode("result");
           return;
         }
         if (DEBUG_SCANNER && decodedText === "dev-invalid") {
-          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim (simuluar)" });
+          setResult({ kind: "invalid", title: "Bileta e pavlefshme ose PIN gabim (simuluar)" });
           setMode("result");
           return;
         }
 
         const token = extractToken(decodedText);
         if (!token) {
-          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
+          await stopScanner();
+          setResult({ kind: "invalid", title: "Bileta e pavlefshme ose PIN gabim" });
           setLastError("token missing");
           setMode("result");
           return;
         }
         if (!pin) {
-          setResult({ kind: "error", message: "Vendosni PIN përpara skanimit." });
+          await stopScanner();
+          setResult({ kind: "invalid", title: "Vendosni PIN përpara skanimit." });
           setMode("pin");
           return;
         }
+
+        // Stop scanner immediately to avoid duplicate decodes during request or errors
+        await stopScanner();
 
         const mapped = await handleCheckIn(token);
         setResult(mapped);
@@ -190,13 +194,12 @@ export default function ScannerClient() {
       } catch (error) {
         setLastError(error instanceof Error ? error.message : String(error));
         setResult({
-          kind: "error",
-          message: "Bileta e pavlefshme ose PIN gabim",
-          details: error instanceof Error ? error.message : String(error),
+          kind: "invalid",
+          title: "Bileta e pavlefshme ose PIN gabim",
+          subtitle: error instanceof Error ? error.message : String(error),
         });
         setMode("result");
       } finally {
-        await stopScanner();
         processingRef.current = false;
         setIsProcessing(false);
       }
@@ -227,9 +230,9 @@ export default function ScannerClient() {
       );
     } catch (error) {
       setResult({
-        kind: "error",
-        message: "Nuk u hap kamera",
-        details: error instanceof Error ? error.message : String(error),
+        kind: "invalid",
+        title: "Nuk u hap kamera",
+        subtitle: error instanceof Error ? error.message : String(error),
       });
       setMode("result");
       await stopScanner();
@@ -272,10 +275,10 @@ export default function ScannerClient() {
     await stopScanner();
   };
 
-  const statusColors: Record<StatusKind, string> = {
+  const statusColors: Record<ResultKind, string> = {
     success: "bg-emerald-600 text-white",
-    info: "bg-blue-600 text-white",
-    error: "bg-red-600 text-white",
+    already: "bg-blue-600 text-white",
+    invalid: "bg-red-600 text-white",
   };
 
   const handleRetry = useCallback(async () => {
@@ -373,7 +376,7 @@ export default function ScannerClient() {
                   variant="ghost"
                   size="sm"
                   className="text-white/80"
-                  onClick={() => void handleScan("dev-valid")}
+                  onClick={() => void handleScan("dev-repeat")}
                 >
                   Simulo repeat
                 </Button>
@@ -405,8 +408,8 @@ export default function ScannerClient() {
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-300">3. Rezultati</p>
             {result && (
               <div className={`rounded-lg px-4 py-5 text-base font-semibold ${statusColors[result.kind]}`}>
-                <p>{result.message}</p>
-                {result.details && <p className="mt-2 text-sm opacity-90">{result.details}</p>}
+                <p>{result.title}</p>
+                {result.subtitle && <p className="mt-2 text-sm opacity-90">{result.subtitle}</p>}
               </div>
             )}
             <Button
@@ -417,13 +420,6 @@ export default function ScannerClient() {
               }}
             >
               Skanoni biletën tjetër
-            </Button>
-            <Button
-              variant="outline"
-              className="h-12 w-full text-base"
-              onClick={onLogout}
-            >
-              Ndrysho PIN
             </Button>
           </div>
         </div>
