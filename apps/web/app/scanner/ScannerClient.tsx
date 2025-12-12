@@ -298,11 +298,15 @@ export default function ScannerClient() {
     setLastError(null);
     lastDecodedRef.current = null;
     if (pin) {
-      setMode("scan");
+      if (mode === "scan") {
+        void startScanner();
+      } else {
+        setMode("scan");
+      }
     } else {
       setMode("pin");
     }
-  }, [pin, stopScanner]);
+  }, [mode, pin, startScanner, stopScanner]);
 
   return (
     <div className="min-h-screen bg-slate-50">
