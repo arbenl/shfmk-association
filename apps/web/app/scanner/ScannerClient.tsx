@@ -191,8 +191,6 @@ export default function ScannerClient() {
         { facingMode: "environment" },
         {
           fps: 20,
-          // Use full-frame scanning; avoid constraining to a small qrbox
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
           disableFlip: true,
         },
         (decodedText) => {
