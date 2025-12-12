@@ -73,6 +73,12 @@ export default function ScannerClient() {
     };
   }, []);
 
+  const stopCameraTracks = useCallback(() => {
+    const video = document.querySelector<HTMLVideoElement>(`#${readerId} video`);
+    const mediaStream = video?.srcObject as MediaStream | null;
+    mediaStream?.getTracks().forEach((t) => t.stop());
+  }, [readerId]);
+
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
     if (scanner) {
@@ -88,7 +94,8 @@ export default function ScannerClient() {
         // ignore
       }
     }
-  }, []);
+    stopCameraTracks();
+  }, [stopCameraTracks]);
 
   const mapResponseToResult = (res: Response, data: any): ResultState => {
     const status = data?.status;
@@ -244,6 +251,7 @@ export default function ScannerClient() {
   // Start or stop scanner based on step/pin
   useEffect(() => {
     if (mode === "scan" && pin) {
+      lastDecodedRef.current = null;
       void startScanner();
     } else {
       void stopScanner();
@@ -288,6 +296,7 @@ export default function ScannerClient() {
     setIsProcessing(false);
     setLastCheckinStatus(null);
     setLastError(null);
+    lastDecodedRef.current = null;
     if (pin) {
       setMode("scan");
     } else {
