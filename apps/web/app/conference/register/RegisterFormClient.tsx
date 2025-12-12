@@ -62,10 +62,6 @@ export default function RegisterFormClient() {
       }
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Regjistrimi dështoi");
-      }
-
       if (data.status === "ALREADY_REGISTERED") {
         return {
           success: true,
@@ -75,9 +71,16 @@ export default function RegisterFormClient() {
         };
       }
 
+      const status = data.status ?? (res.ok ? "OK" : undefined);
+      const isSuccessStatus = status === "OK" || status === "EMAIL_FAILED" || status === "CREATED";
+
+      if (!res.ok || !data.registrationId || !isSuccessStatus) {
+        throw new Error(data.error ?? "Regjistrimi dështoi");
+      }
+
       return {
         registrationId: data.registrationId,
-        status: data.status,
+        status,
         success: true,
         message: data.message,
       };
