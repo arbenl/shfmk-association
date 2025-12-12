@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isSuspiciousRegistration } from "./registrationSpamCheck.ts";
+import { isSuspiciousRegistration } from "./registrationSpamCheck";
 
 const junkInput = {
   full_name: "jNDNJfWdvXdkKoqeUW",
