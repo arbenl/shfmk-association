@@ -123,15 +123,17 @@ export async function POST(req: NextRequest) {
       });
 
       if (!sendResult.success) {
-        return NextResponse.json(
-          {
-            ok: false,
-            code: "EMAIL_FAILED",
-            error: sendResult.error ?? "Dërgimi i email-it (me PDF) dështoi.",
-            registrationId: registration.id,
-          },
-          { status: 502 }
-        );
+        // Registration succeeded but email failed (e.g., provider compliance block). Surface success with warning.
+        return NextResponse.json({
+          ok: true,
+          status: "EMAIL_FAILED",
+          registrationId: registration.id,
+          emailSent: false,
+          code: "EMAIL_FAILED",
+          message:
+            sendResult.error ??
+            "Regjistrimi u krye, por dërgimi i email-it dështoi. Ju lutemi provoni përsëri ridërgimin.",
+        });
       }
     }
 

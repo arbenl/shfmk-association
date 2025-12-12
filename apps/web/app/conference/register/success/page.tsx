@@ -38,6 +38,14 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
           <CardTitle className="text-2xl">Regjistrimi u krye me sukses!</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
+          {registration.email_status !== "sent" && (
+            <div className="rounded-md bg-amber-50 p-3 text-left text-amber-900">
+              <p className="font-semibold">Konfirmimi me email nuk u dërgua ende.</p>
+              <p className="text-sm">
+                Ju lutem provoni “Ridërgo” më vonë ose kontaktoni organizatorin nëse problemi vazhdon.
+              </p>
+            </div>
+          )}
           <p>Faleminderit për regjistrimin tuaj, {registration.full_name}. Ruajeni këtë kod QR pasi që është bileta juaj për konferencë.</p>
           <div className="flex justify-center bg-white p-4 rounded-lg">
             {qrDataUrl ? <Image src={qrDataUrl} alt="QR Code" width={240} height={240} /> : <div className="w-[240px] h-[240px] bg-gray-200 animate-pulse rounded-md" />}

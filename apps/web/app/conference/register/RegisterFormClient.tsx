@@ -79,6 +79,7 @@ export default function RegisterFormClient() {
         registrationId: data.registrationId,
         status: data.status,
         success: true,
+        message: data.message,
       };
     } catch (err) {
       return { message: (err as Error).message ?? "Një gabim i papritur ndodhi gjatë dërgimit të kërkesës." };
