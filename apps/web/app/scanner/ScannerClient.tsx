@@ -292,6 +292,7 @@ export default function ScannerClient() {
   };
 
   const handleRetry = useCallback(async () => {
+    // Always stop any active scanner/camera, clear guards, and relaunch scan.
     await stopScanner();
     setResult(null);
     processingRef.current = false;
@@ -304,12 +305,7 @@ export default function ScannerClient() {
       return;
     }
     setMode("scan");
-    // Kick scanner start without waiting for effects, but guard on current state.
-    setTimeout(() => {
-      if (pin) {
-        void startScanner();
-      }
-    }, 0);
+    await startScanner();
   }, [pin, startScanner, stopScanner]);
 
   return (
