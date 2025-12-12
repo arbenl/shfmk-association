@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 type StatusKind = "success" | "info" | "error";
+type Mode = "pin" | "scan" | "result";
 
 interface ResultState {
   kind: StatusKind;
@@ -40,7 +41,7 @@ function extractToken(raw: string): string | null {
 export default function ScannerClient() {
   const [pinInput, setPinInput] = useState("");
   const [pin, setPin] = useState<string | null>(null);
-  const [mode, setMode] = useState<"pin" | "scan" | "result">("pin");
+  const [mode, setMode] = useState<Mode>("pin");
   const [result, setResult] = useState<ResultState | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,6 +51,7 @@ export default function ScannerClient() {
   const [lastError, setLastError] = useState<string | null>(null);
   const processingRef = useRef(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastDecodedRef = useRef<{ text: string; ts: number } | null>(null);
   const readerId = useMemo(() => "qr-reader-container", []);
 
   // Load stored PIN once
@@ -88,53 +90,104 @@ export default function ScannerClient() {
     }
   }, []);
 
+  const mapResponseToResult = (res: Response, data: any): ResultState => {
+    const status = data?.status;
+    if (res.ok && status === "checked_in") {
+      const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
+      return { kind: "success", message: "Check-in u krye", details };
+    }
+    if (res.ok && (status === "already_checked" || status === "already_checked_in")) {
+      const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
+      return { kind: "info", message: "Pjesëmarrësi është check-in më herët", details };
+    }
+    if (res.ok && status === "invalid") {
+      return { kind: "error", message: "Bileta e pavlefshme ose PIN gabim" };
+    }
+    if (res.ok && data?.ok === true && !status) {
+      return { kind: "success", message: "Check-in u krye" };
+    }
+    return { kind: "error", message: "Bileta e pavlefshme ose PIN gabim" };
+  };
+
   const handleCheckIn = useCallback(
-    async (token: string) => {
-      if (!pin) {
-        setResult({ kind: "error", message: "Vendosni PIN përpara skanimit." });
-        setMode("pin");
+    async (token: string): Promise<ResultState> => {
+      const response = await fetch("/api/admin/checkin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": pin ?? "",
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (isDev) console.log("[scanner] check-in response", response.status, data);
+      setLastCheckinStatus(JSON.stringify({ status: data?.status, http: response.status }));
+
+      const mapped = mapResponseToResult(response, data);
+      if (mapped.kind === "error" && isDev) {
+        setLastError(`Unexpected payload: ${JSON.stringify(data)}`);
+      }
+      return mapped;
+    },
+    [pin]
+  );
+
+  const handleScan = useCallback(
+    async (decodedText: string) => {
+      if (isDev) console.log("[scanner] decoded QR:", decodedText);
+      setLastDecodedText(decodedText);
+      if (processingRef.current) {
+        setLastError("ignored: processing");
+        return;
+      }
+      const now = Date.now();
+      if (lastDecodedRef.current && lastDecodedRef.current.text === decodedText && now - lastDecodedRef.current.ts < 2000) {
+        setLastError("ignored: debounce");
         return;
       }
 
-      if (processingRef.current) return;
       processingRef.current = true;
       setIsProcessing(true);
+      lastDecodedRef.current = { text: decodedText, ts: now };
       setLastCheckinStatus(null);
       setLastError(null);
 
       try {
-        if (isDev) console.log("[scanner] calling /api/admin/checkin …");
-        const response = await fetch("/api/admin/checkin", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-key": pin,
-          },
-          body: JSON.stringify({ token }),
-        });
-
-        const data = await response.json().catch(() => null);
-        if (isDev) console.log("[scanner] check-in response", response.status, data);
-        setLastCheckinStatus(JSON.stringify({ status: data?.status, http: response.status }));
-
-        const status = data?.status;
-        const already =
-          status === "already_checked" ||
-          status === "already_checked_in" ||
-          data?.alreadyCheckedIn;
-
-        if (response.ok && (status === "checked_in" || data?.ok === true)) {
-          const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
-          setResult({ kind: "success", message: "Check-in u krye", details });
-        } else if ((response.ok || response.status === 409) && already) {
-          const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
-          setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët", details });
-        } else {
-          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
+        // Dev simulation shortcuts
+        if (DEBUG_SCANNER && decodedText === "dev-valid") {
+          setResult({ kind: "success", message: "Check-in u krye (simuluar)" });
+          setMode("result");
+          return;
         }
+        if (DEBUG_SCANNER && decodedText === "dev-repeat") {
+          setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët (simuluar)" });
+          setMode("result");
+          return;
+        }
+        if (DEBUG_SCANNER && decodedText === "dev-invalid") {
+          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim (simuluar)" });
+          setMode("result");
+          return;
+        }
+
+        const token = extractToken(decodedText);
+        if (!token) {
+          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
+          setLastError("token missing");
+          setMode("result");
+          return;
+        }
+        if (!pin) {
+          setResult({ kind: "error", message: "Vendosni PIN përpara skanimit." });
+          setMode("pin");
+          return;
+        }
+
+        const mapped = await handleCheckIn(token);
+        setResult(mapped);
         setMode("result");
       } catch (error) {
-        if (isDev) console.error("[scanner] check-in error", error);
         setLastError(error instanceof Error ? error.message : String(error));
         setResult({
           kind: "error",
@@ -148,35 +201,7 @@ export default function ScannerClient() {
         setIsProcessing(false);
       }
     },
-    [pin, stopScanner]
-  );
-
-  const handleScan = useCallback(
-    async (decodedText: string) => {
-      try {
-        if (isDev) console.log("[scanner] decoded QR:", decodedText);
-        setLastDecodedText(decodedText);
-        if (processingRef.current) {
-          setLastError("ignored: processing");
-          return;
-        }
-        const token = extractToken(decodedText);
-        if (!token) {
-          setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
-          setLastError("token missing");
-          setMode("result");
-          return;
-        }
-        await handleCheckIn(token);
-      } catch (error) {
-        setLastError(error instanceof Error ? error.message : String(error));
-        setResult({ kind: "error", message: "Bileta e pavlefshme ose PIN gabim" });
-        setMode("result");
-        processingRef.current = false;
-        setIsProcessing(false);
-      }
-    },
-    [handleCheckIn]
+    [handleCheckIn, pin, stopScanner]
   );
 
   const startScanner = useCallback(async () => {
@@ -267,17 +292,6 @@ export default function ScannerClient() {
     }
   }, [pin, stopScanner]);
 
-  // Auto-return to scan mode after showing a success/info result
-  useEffect(() => {
-    if (mode !== "result" || !result) return;
-    if (result.kind === "success" || result.kind === "info") {
-      const timer = setTimeout(() => {
-        void handleRetry();
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [mode, result, handleRetry]);
-
   return (
     <div className="min-h-screen bg-slate-50">
       {mode === "pin" && (
@@ -321,10 +335,7 @@ export default function ScannerClient() {
 
       {mode === "scan" && (
         <div className="relative min-h-screen bg-black text-white">
-          <div
-            id={readerId}
-            className="absolute inset-0 bg-black"
-          >
+          <div id={readerId} className="absolute inset-0 bg-black">
             {isStarting && (
               <div className="flex h-full items-center justify-center text-sm text-white/80">
                 Duke hapur kamerën...
@@ -332,18 +343,12 @@ export default function ScannerClient() {
             )}
           </div>
 
-          <div className="absolute top-0 left-0 right-0 flex items-start justify-between px-4 py-3 text-sm pointer-events-none">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-wide text-blue-300">2. Skanoni biletën</p>
-              <p className="font-semibold">{isProcessing ? "Duke verifikuar..." : "Gati për skanim"}</p>
-            </div>
-            <Badge variant="secondary" className="text-[11px] pointer-events-auto">
-              PIN aktiv
-            </Badge>
+          <div className="absolute top-0 left-0 right-0 px-4 py-3 text-center pointer-events-none">
+            <p className="text-xs uppercase tracking-wide text-blue-300">2. Skanoni biletën</p>
+            <p className="font-semibold">{isProcessing ? "Duke verifikuar..." : "Gati për skanim"}</p>
           </div>
 
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-3 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
-            <p className="text-center text-sm text-white/80">Vendosni QR-në në qendër të kamerës.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Button variant="outline" className="h-12 w-full text-base" onClick={onLogout}>
                 Ndrysho PIN
@@ -352,16 +357,34 @@ export default function ScannerClient() {
                 Rifresko / Anulo
               </Button>
             </div>
-            {isDev && (
-              <div className="flex justify-end">
+            {DEBUG_SCANNER && (
+              <div className="grid grid-cols-3 gap-2 text-xs">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => void handleScan("https://shfk.org/verify?token=dummy-token")}
                   className="text-white/80"
+                  onClick={() => void handleScan("dev-valid")}
                 >
-                  Simulo skanim (dev)
+                  Simulo valid
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/80"
+                  onClick={() => void handleScan("dev-valid")}
+                >
+                  Simulo repeat
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/80"
+                  onClick={() => void handleScan("dev-invalid")}
+                >
+                  Simulo invalid
                 </Button>
               </div>
             )}
@@ -377,37 +400,31 @@ export default function ScannerClient() {
       )}
 
       {mode === "result" && (
-        <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 py-10">
-          <div className="flex flex-1 items-center">
-            <Card className="w-full shadow-md">
-              <CardHeader className="space-y-3 text-center">
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">3. Rezultati</p>
-                {result && (
-                  <div className={`rounded-lg px-4 py-3 text-sm font-semibold ${statusColors[result.kind]}`}>
-                    <p>{result.message}</p>
-                    {result.details && <p className="mt-1 text-xs opacity-90">{result.details}</p>}
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button
-                  className="h-12 w-full text-base"
-                  onClick={() => {
-                    setResult(null);
-                    setMode("scan");
-                  }}
-                >
-                  Skanoni biletën tjetër
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-12 w-full text-base"
-                  onClick={onLogout}
-                >
-                  Ndrysho PIN
-                </Button>
-              </CardContent>
-            </Card>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-black px-4 py-10 text-white">
+          <div className="w-full max-w-lg space-y-6 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-300">3. Rezultati</p>
+            {result && (
+              <div className={`rounded-lg px-4 py-5 text-base font-semibold ${statusColors[result.kind]}`}>
+                <p>{result.message}</p>
+                {result.details && <p className="mt-2 text-sm opacity-90">{result.details}</p>}
+              </div>
+            )}
+            <Button
+              className="h-12 w-full text-base"
+              onClick={() => {
+                setResult(null);
+                setMode("scan");
+              }}
+            >
+              Skanoni biletën tjetër
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 w-full text-base"
+              onClick={onLogout}
+            >
+              Ndrysho PIN
+            </Button>
           </div>
         </div>
       )}
