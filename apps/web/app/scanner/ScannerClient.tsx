@@ -308,31 +308,29 @@ export default function ScannerClient() {
       )}
 
       {mode === "scan" && (
-        <div className="flex min-h-screen flex-col bg-black text-white">
-          <div className="flex items-center justify-between px-4 py-3 text-sm">
+        <div className="relative min-h-screen bg-black text-white">
+          <div
+            id={readerId}
+            className="absolute inset-0 bg-black"
+          >
+            {isStarting && (
+              <div className="flex h-full items-center justify-center text-sm text-white/80">
+                Duke hapur kamerën...
+              </div>
+            )}
+          </div>
+
+          <div className="absolute top-0 left-0 right-0 flex items-start justify-between px-4 py-3 text-sm pointer-events-none">
             <div className="space-y-1">
               <p className="text-xs uppercase tracking-wide text-blue-300">2. Skanoni biletën</p>
               <p className="font-semibold">{isProcessing ? "Duke verifikuar..." : "Gati për skanim"}</p>
             </div>
-            <Badge variant="secondary" className="text-[11px]">
+            <Badge variant="secondary" className="text-[11px] pointer-events-auto">
               PIN aktiv
             </Badge>
           </div>
-          <div className="flex-1">
-            <div className="flex h-full items-center justify-center">
-              <div
-                id={readerId}
-                className="aspect-[3/4] w-full max-w-3xl overflow-hidden bg-black"
-              >
-                {isStarting && (
-                  <div className="flex h-full items-center justify-center text-sm text-white/80">
-                    Duke hapur kamerën...
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2 px-4 pb-6">
+
+          <div className="absolute bottom-0 left-0 right-0 p-4 space-y-3 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
             <p className="text-center text-sm text-white/80">Vendosni QR-në në qendër të kamerës.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Button variant="outline" className="h-12 w-full text-base" onClick={onLogout}>
