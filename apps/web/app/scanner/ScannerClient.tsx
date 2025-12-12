@@ -290,23 +290,24 @@ export default function ScannerClient() {
   };
 
   const handleRetry = useCallback(async () => {
-    await stopScanner();
     setResult(null);
     processingRef.current = false;
     setIsProcessing(false);
     setLastCheckinStatus(null);
     setLastError(null);
     lastDecodedRef.current = null;
-    if (pin) {
-      if (mode === "scan") {
-        void startScanner();
-      } else {
-        setMode("scan");
-      }
-    } else {
+    if (!pin) {
       setMode("pin");
+      return;
     }
-  }, [mode, pin, startScanner, stopScanner]);
+    setMode("scan");
+    // Kick scanner start without waiting for effects, but guard on current state.
+    setTimeout(() => {
+      if (pin) {
+        void startScanner();
+      }
+    }, 0);
+  }, [pin, startScanner]);
 
   return (
     <div className="min-h-screen bg-slate-50">
