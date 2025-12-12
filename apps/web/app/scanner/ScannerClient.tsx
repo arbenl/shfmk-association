@@ -108,10 +108,16 @@ export default function ScannerClient() {
         if (isDev) console.log("[scanner] check-in response", response.status, data);
         setLastCheckinStatus(JSON.stringify({ status: data?.status, http: response.status }));
 
-        if (response.ok && data?.status === "checked_in") {
+        const status = data?.status;
+        const already =
+          status === "already_checked" ||
+          status === "already_checked_in" ||
+          data?.alreadyCheckedIn;
+
+        if (response.ok && status === "checked_in") {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
           setResult({ kind: "success", message: "Check-in u krye", details });
-        } else if (response.ok && (data?.status === "already_checked" || data?.status === "already_checked_in" || data?.alreadyCheckedIn)) {
+        } else if ((response.ok || response.status === 409) && already) {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
           setResult({ kind: "info", message: "Pjesëmarrësi është check-in më herët", details });
         } else {
@@ -174,7 +180,7 @@ export default function ScannerClient() {
     try {
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 260 },
+        { fps: 15, qrbox: 260 },
         (decodedText) => {
           void handleScan(decodedText);
         },
@@ -235,7 +241,7 @@ export default function ScannerClient() {
     error: "bg-red-600 text-white",
   };
 
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     await stopScanner();
     setResult(null);
     processingRef.current = false;
@@ -247,7 +253,18 @@ export default function ScannerClient() {
     } else {
       setMode("pin");
     }
-  };
+  }, [pin, stopScanner]);
+
+  // Auto-return to scan mode after showing a success/info result
+  useEffect(() => {
+    if (mode !== "result" || !result) return;
+    if (result.kind === "success" || result.kind === "info") {
+      const timer = setTimeout(() => {
+        void handleRetry();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [mode, result, handleRetry]);
 
   return (
     <div className="min-h-screen bg-slate-50">
