@@ -84,11 +84,19 @@ export default function App() {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.ok) {
+      if (!res.ok) {
         throw new Error(data.error ?? "Bileta e pavlefshme.");
       }
 
-      const repeat = data.status === "already_checked_in" || data.alreadyCheckedIn;
+      const isSuccess = data.ok === undefined ? true : Boolean(data.ok);
+      if (!isSuccess) {
+        throw new Error(data.error ?? "Bileta e pavlefshme.");
+      }
+
+      const repeat =
+        data.status === "already_checked" ||
+        data.status === "already_checked_in" ||
+        data.alreadyCheckedIn === true;
       const payload = {
         name: data.fullName ?? "Pjesëmarrës",
         cat: data.category ?? "",
