@@ -268,7 +268,6 @@ export async function createRegistration(params: {
       fee_amount: params.feeAmount,
       currency: params.currency,
       qr_token: params.qrToken, // Insert the token directly
-      is_spam: params.isSpam ?? false,
     })
     .select("*")
     .single();
