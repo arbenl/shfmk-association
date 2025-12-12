@@ -18,7 +18,9 @@ type ResultState = {
 
 const STORAGE_KEY = "scanner-admin-key";
 const isDev = process.env.NODE_ENV !== "production";
-const DEBUG_SCANNER = process.env.NEXT_PUBLIC_DEBUG_SCANNER === "1";
+const DEBUG_SCANNER =
+  process.env.NEXT_PUBLIC_DEBUG_SCANNER === "1" ||
+  (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1");
 
 function extractToken(raw: string): string | null {
   // Try URL with ?token=
@@ -290,6 +292,7 @@ export default function ScannerClient() {
   };
 
   const handleRetry = useCallback(async () => {
+    await stopScanner();
     setResult(null);
     processingRef.current = false;
     setIsProcessing(false);
@@ -307,7 +310,7 @@ export default function ScannerClient() {
         void startScanner();
       }
     }, 0);
-  }, [pin, startScanner]);
+  }, [pin, startScanner, stopScanner]);
 
   return (
     <div className="min-h-screen bg-slate-50">
