@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -123,7 +123,7 @@ export default function ScannerClient() {
           status === "already_checked_in" ||
           data?.alreadyCheckedIn;
 
-        if (response.ok && status === "checked_in") {
+        if (response.ok && (status === "checked_in" || data?.ok === true)) {
           const details = data?.fullName ? `${data.fullName}${data.category ? ` • ${data.category}` : ""}` : undefined;
           setResult({ kind: "success", message: "Check-in u krye", details });
         } else if ((response.ok || response.status === 409) && already) {
@@ -189,7 +189,12 @@ export default function ScannerClient() {
     try {
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 15, qrbox: 260 },
+        {
+          fps: 20,
+          // Use full-frame scanning; avoid constraining to a small qrbox
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          disableFlip: true,
+        },
         (decodedText) => {
           void handleScan(decodedText);
         },
