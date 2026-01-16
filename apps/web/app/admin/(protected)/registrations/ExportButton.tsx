@@ -11,7 +11,7 @@ interface Registration {
     fee_amount: number;
     currency: string;
     created_at: string;
-    check_in_status?: string;
+    checked_in?: boolean;
 }
 
 export function ExportButton({ data }: { data: Registration[] }) {
@@ -25,7 +25,7 @@ export function ExportButton({ data }: { data: Registration[] }) {
             r.fee_amount,
             r.currency,
             new Date(r.created_at).toLocaleDateString('sq-AL'),
-            r.check_in_status || 'jo'
+            r.checked_in ? 'PO' : 'jo'
         ].join(","));
 
         const csvContent = [headers, ...rows].join("\n");
